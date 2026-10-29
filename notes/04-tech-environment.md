@@ -75,30 +75,28 @@ export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
 `./gradlew build`, `actions/upload-artifact` с `build/libs/*.jar` (без `-sources`).
 Это же даёт проверку, что проект собирается «с нуля», а не только на локальном кэше.
 
-## 6. План сборки (итерация 0)
+## 6. План сборки (итерация 0) — выполнено
 
-1. Wrapper: **Gradle 8.12** (скачивается с `services.gradle.org`, проверено) — MDG 2.0.x
-   рассчитан на 8.8+, поддержка Gradle 9 не гарантирована. Если 9.x окажется совместимой,
-   можно остаться на кэшированной 9.6.1.
-2. `gradle.properties`: `minecraft_version=1.21.1`, `neo_version=21.1.228` (**не 262** —
-   262 нет в кэше), `mod_id=libresearch`, `mod_version=0.1.0`.
-3. `settings.gradle`: `pluginManagement` с репозиториями
-   `maven.neoforged.net/releases` и `plugins.gradle.org/m2`; для офлайна —
-   `resolutionStrategy.eachPlugin { useModule("net.neoforged:moddev-gradle:2.0.140") }`,
-   чтобы не требовался plugin-marker.
-4. Первый запуск: `JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew --offline build`.
-5. Если MDG не резолвится офлайн — добавить jar MDG в `buildscript` classpath из
-   `~/.gradle/caches/modules-2/files-2.1/net.neoforged/moddev-gradle/2.0.140/...`
-   (костыль только для локальной сборки, в git не коммитить).
-6. Проверка: `runClient` из IDE/Gradle с `JAVA_HOME=21`; в игре `/libresearch` отвечает.
+1. Wrapper: собран системным Gradle 9.8.1 под **9.6.1** (дистрибутив уже в кэше).
+   MDG 2.0.140 с Gradle 9.6.1 совместим — сборка проходит.
+2. `gradle.properties`: `minecraft_version=1.21.1`, `neo_version=21.1.228`, `mod_id=libresearch`.
+3. `settings.gradle`: `pluginManagement` + `resolutionStrategy.eachPlugin` →
+   `useModule("net.neoforged:moddev-gradle:2.0.140")`, поэтому plugin-marker не нужен.
+4. `./gradlew --offline build` — успешно, без сети.
+5. `runClient`/`runServer` требуют `neoforge-21.1.228-moddev-config.json`; его нет в кэше,
+   но он скачивается через **Tor HTTP-прокси** (проверено: ответ 200):
+   `./gradlew -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9060 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9060 runClient`.
+   После первого запуска артефакт в кэше.
+6. Проверка: сервер стартует и логирует `Загружено типов столов: 2`,
+   `Загружено определений чернильниц: 1`; клиент стартует без missing model.
 
 ## 7. Риски
 
 | Риск | Обход |
 |---|---|
-| `maven.neoforged.net` недоступен | офлайн-сборка на кэше 21.1.228; при необходимости — VPN/прокси |
+| `maven.neoforged.net` недоступен | офлайн-сборка на кэше 21.1.228; для run-тасков — Tor HTTP-прокси |
 | Java 27 по умолчанию | всегда явный `JAVA_HOME` 21 + toolchain в `build.gradle` |
-| Gradle 9 vs MDG 2.0.140 | wrapper 8.12 с services.gradle.org |
+| Gradle 9 vs MDG 2.0.140 | проверено: 9.6.1 работает |
 | NeoForge 21.1.228 в dev vs 21.1.262 в инстансе | API в пределах 21.1.x совместим, тестировать на 262 |
 | KubeJS 2101.7.2 API нестабилен | интеграция последней итерацией, `compileOnly`, без жёсткой зависимости |
 | Ассеты ImageMagick «черновые» | отдельная папка `tools/assets`, заказчик дорисовывает |

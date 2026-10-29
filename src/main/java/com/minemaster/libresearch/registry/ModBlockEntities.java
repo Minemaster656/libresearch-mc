@@ -1,0 +1,23 @@
+package com.minemaster.libresearch.registry;
+
+import com.minemaster.libresearch.LibResearch;
+import com.minemaster.libresearch.block.ResearchTableBlockEntity;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+public final class ModBlockEntities {
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
+            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, LibResearch.MOD_ID);
+
+    /** Один тип BlockEntity обслуживает все столы: различаются они полем table_type. */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ResearchTableBlockEntity>> RESEARCH_TABLE =
+            BLOCK_ENTITIES.register("research_table", () -> BlockEntityType.Builder.of(
+                    ResearchTableBlockEntity::new,
+                    ModBlocks.RESEARCH_TABLE.get(),
+                    ModBlocks.DEBUG_TABLE.get()).build(null));
+
+    private ModBlockEntities() {
+    }
+}

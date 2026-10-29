@@ -1,0 +1,8 @@
+{
+  "block.libresearch.research_table": "Research Table",
+  "block.libresearch.debug_table": "Debug Research Table",
+  "item.libresearch.inkwell": "Inkwell",
+  "itemGroup.libresearch": "LibResearch",
+  "tooltip.libresearch.inkwell_charges": "Ink: %s / %s",
+  "libresearch.table.empty": "Unknown table type"
+}

@@ -1,0 +1,62 @@
+{
+  "display": "Debug Table",
+  "disciplines": [
+    {
+      "id": "red",
+      "display": "Red",
+      "color": "#FF0000",
+      "icon": "minecraft:red_dye",
+      "payout": "minecraft:red_dye",
+      "count_per_point": 1
+    },
+    {
+      "id": "orange",
+      "display": "Orange",
+      "color": "#FF8000",
+      "icon": "minecraft:orange_dye",
+      "payout": "minecraft:orange_dye",
+      "count_per_point": 1
+    },
+    {
+      "id": "yellow",
+      "display": "Yellow",
+      "color": "#FFFF00",
+      "icon": "minecraft:yellow_dye",
+      "payout": "minecraft:yellow_dye",
+      "count_per_point": 1
+    },
+    {
+      "id": "lime",
+      "display": "Lime",
+      "color": "#80FF00",
+      "icon": "minecraft:lime_dye",
+      "payout": "minecraft:lime_dye",
+      "count_per_point": 1
+    },
+    {
+      "id": "blue",
+      "display": "Blue",
+      "color": "#0000FF",
+      "icon": "minecraft:blue_dye",
+      "payout": "minecraft:blue_dye",
+      "count_per_point": 1
+    }
+  ],
+  "bonus_blocks": [
+    {
+      "block": "minecraft:stone",
+      "display": "Stone",
+      "cards": []
+    },
+    {
+      "block": "minecraft:obsidian",
+      "display": "Obsidian",
+      "cards": []
+    },
+    {
+      "block": "minecraft:bedrock",
+      "display": "Bedrock",
+      "cards": []
+    }
+  ]
+}

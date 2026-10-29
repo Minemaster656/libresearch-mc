@@ -1,0 +1,80 @@
+{
+  "display": "Research Table",
+  "disciplines": [
+    {
+      "id": "copper",
+      "display": "Copper",
+      "color": "#C87F4A",
+      "icon": "minecraft:copper_ingot",
+      "payout": "minecraft:copper_ingot",
+      "count_per_point": 2
+    },
+    {
+      "id": "iron",
+      "display": "Iron",
+      "color": "#D8D8D8",
+      "icon": "minecraft:iron_ingot",
+      "payout": "minecraft:iron_ingot",
+      "count_per_point": 2
+    },
+    {
+      "id": "gold",
+      "display": "Gold",
+      "color": "#F6D34C",
+      "icon": "minecraft:gold_ingot",
+      "payout": "minecraft:gold_ingot",
+      "count_per_point": 2
+    },
+    {
+      "id": "diamond",
+      "display": "Diamond",
+      "color": "#4AEDD9",
+      "icon": "minecraft:diamond",
+      "payout": "minecraft:diamond",
+      "count_per_point": 1
+    },
+    {
+      "id": "netherite",
+      "display": "Netherite",
+      "color": "#4B3B3B",
+      "icon": "minecraft:netherite_ingot",
+      "payout": "minecraft:netherite_ingot",
+      "count_per_point": 1
+    },
+    {
+      "id": "forbidden",
+      "display": "Forbidden",
+      "color": "#B03AA0",
+      "icon": "minecraft:nether_star",
+      "payout": "minecraft:nether_star",
+      "count_per_point": 1
+    }
+  ],
+  "bonus_blocks": [
+    {
+      "block": "minecraft:crafting_table",
+      "display": "Crafting Table",
+      "cards": []
+    },
+    {
+      "block": "minecraft:furnace",
+      "display": "Furnace",
+      "cards": []
+    },
+    {
+      "block": "minecraft:blast_furnace",
+      "display": "Blast Furnace",
+      "cards": []
+    },
+    {
+      "block": "minecraft:smithing_table",
+      "display": "Smithing Table",
+      "cards": []
+    },
+    {
+      "block": "minecraft:enchanting_table",
+      "display": "Enchanting Table",
+      "cards": []
+    }
+  ]
+}

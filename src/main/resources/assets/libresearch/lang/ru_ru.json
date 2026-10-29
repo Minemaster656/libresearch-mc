@@ -1,0 +1,8 @@
+{
+  "block.libresearch.research_table": "Стол исследований",
+  "block.libresearch.debug_table": "Отладочный стол",
+  "item.libresearch.inkwell": "Чернильница",
+  "itemGroup.libresearch": "LibResearch",
+  "tooltip.libresearch.inkwell_charges": "Чернила: %s / %s",
+  "libresearch.table.empty": "Неизвестный тип стола"
+}

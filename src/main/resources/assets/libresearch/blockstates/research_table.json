@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "libresearch:block/research_table"
+    }
+  }
+}
