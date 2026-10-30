@@ -42,7 +42,31 @@ neoForge {
 }
 
 repositories {
+    // Тестовые библиотеки тянем только с Maven Central: maven.neoforged.net
+    // отсюда недоступен и иначе Gradle ждёт таймаут на каждый артефакт.
+    exclusiveContent {
+        forRepository { mavenCentral() }
+        filter {
+            includeGroupByRegex 'org\\.junit.*'
+            includeGroupByRegex 'org\\.opentest4j.*'
+            includeGroupByRegex 'org\\.apiguardian.*'
+        }
+    }
     mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'failed'
+        exceptionFormat 'full'
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {

@@ -1,5 +1,7 @@
 package com.minemaster.libresearch.data;
 
+import com.minemaster.libresearch.theory.SelfTest;
+import com.minemaster.libresearch.theory.TheoryCommand;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -8,14 +10,19 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import java.util.List;
 
-/** Команды мода: {@code /libresearch validate}. */
+/** Команды мода: {@code /libresearch validate}, {@code /libresearch theory ...}, {@code /libresearch knowledge}. */
 public final class LibCommands {
     private LibCommands() {
     }
 
     public static void register(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("libresearch")
-                .then(Commands.literal("validate").executes(context -> validate(context.getSource()))));
+                .then(Commands.literal("validate").executes(context -> validate(context.getSource())))
+                .then(Commands.literal("knowledge").executes(TheoryCommand::knowledge))
+                .then(Commands.literal("selftest")
+                        .requires(source -> source.hasPermission(2))
+                        .executes(context -> SelfTest.run(context.getSource())))
+                .then(TheoryCommand.tree()));
     }
 
     private static int validate(CommandSourceStack source) {
