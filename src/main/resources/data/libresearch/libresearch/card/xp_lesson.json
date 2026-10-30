@@ -1,0 +1,13 @@
+{
+  "display": "XP Lesson",
+  "cost": 1,
+  "weight": 1,
+  "discipline": "gold",
+  "requires": [
+    { "type": "xp_levels", "min": 3, "consume": true }
+  ],
+  "effects": [
+    { "type": "progress", "target": "self", "amount": 10 },
+    { "type": "inspiration", "amount": 1 }
+  ]
+}

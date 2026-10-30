@@ -52,9 +52,15 @@ MVP-контент:
 ## 3. Схема данных
 
 Пути датапака:
-- `data/<ns>/libresearch/discipline/<id>.json`
+- `data/<ns>/libresearch/discipline/<id>.json` — дисциплина (внутри `table_type`, см. итерацию 0/1)
 - `data/<ns>/libresearch/card/<id>.json`
-- `data/<ns>/libresearch/table_bonus/<id>.json`
+- `data/<ns>/libresearch/table_bonus/<id>.json` — бонусный блок, **глобальный реестр**
+- `data/<ns>/libresearch/table_type/<id>.json` — тип стола; `bonus_blocks` — список id-ссылок
+  на `table_bonus`, а не встроенные объекты (один бонус переиспользуется разными столами)
+- `data/<ns>/libresearch/inkwell/<id>.json` — чернильница (предмет, ёмкость, цвет, расход)
+
+`display` во всех определениях — пока обычная строка (ключ локализации или сырое имя);
+в итерации 6 заменим на объект с описанием и иконкой.
 
 ### Дисциплина
 

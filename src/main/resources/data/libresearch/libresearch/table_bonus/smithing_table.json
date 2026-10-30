@@ -1,0 +1,9 @@
+{
+  "display": "Smithing Table",
+  "match": { "blocks": ["minecraft:smithing_table"] },
+  "cost": 1,
+  "cards": [
+    { "card": "libresearch:insight", "count": 1 },
+    { "card": "libresearch:xp_lesson", "count": 1 }
+  ]
+}

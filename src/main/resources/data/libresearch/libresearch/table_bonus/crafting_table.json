@@ -1,0 +1,9 @@
+{
+  "display": "Crafting Table",
+  "match": { "blocks": ["minecraft:crafting_table"] },
+  "cost": 1,
+  "cards": [
+    { "card": "libresearch:study", "count": 2 },
+    { "card": "libresearch:calibration", "count": 1 }
+  ]
+}

@@ -3,7 +3,7 @@ package com.minemaster.libresearch.item;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.minemaster.libresearch.LibResearch;
-import com.mojang.serialization.JsonOps;
+import com.minemaster.libresearch.data.JsonLoad;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
@@ -30,8 +30,7 @@ public final class InkwellDefinitions extends SimpleJsonResourceReloadListener {
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager resourceManager, ProfilerFiller profiler) {
         Map<ResourceLocation, InkwellDefinition> parsed = new HashMap<>();
-        files.forEach((id, json) -> InkwellDefinition.CODEC.parse(JsonOps.INSTANCE, json)
-                .resultOrPartial(error -> LibResearch.LOGGER.error("Не удалось прочитать чернильницу {}: {}", id, error))
+        files.forEach((id, json) -> JsonLoad.parse(InkwellDefinition.CODEC, json, id, "чернильницу")
                 .ifPresent(definition -> parsed.put(definition.item(), definition)));
         byItem = Map.copyOf(parsed);
         LibResearch.LOGGER.info("Загружено определений чернильниц: {}", byItem.size());

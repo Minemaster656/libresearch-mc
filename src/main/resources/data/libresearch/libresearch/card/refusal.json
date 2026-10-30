@@ -1,0 +1,8 @@
+{
+  "display": "Refusal",
+  "cost": 0,
+  "weight": 1,
+  "effects": [
+    { "type": "block_discipline", "target": "random" }
+  ]
+}

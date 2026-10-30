@@ -1,0 +1,9 @@
+{
+  "display": "Dye Study",
+  "cost": 1,
+  "weight": 2,
+  "discipline": "red",
+  "effects": [
+    { "type": "progress", "target": "self", "amount": 15 }
+  ]
+}

@@ -49,6 +49,12 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
+// Пробрасываем stdin в игру, чтобы можно было отдавать команды серверу из консоли:
+// mkfifo /tmp/opencode/server.in && ./gradlew runServer < /tmp/opencode/server.in
+tasks.matching { it.name == 'runServer' || it.name == 'runClient' || it.name == 'runData' }.configureEach {
+    standardInput = System.in
+}
+
 tasks.named('processResources', ProcessResources).configure {
     var replaceProperties = [
             minecraft_version      : minecraft_version,

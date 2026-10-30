@@ -1,0 +1,13 @@
+{
+  "display": "Insight",
+  "cost": 2,
+  "weight": 1,
+  "spawn": {
+    "requirements": [
+      { "type": "progress", "min_total": 1 }
+    ]
+  },
+  "effects": [
+    { "type": "progress", "target": "highest", "amount": { "min": 10, "max": 20 } }
+  ]
+}

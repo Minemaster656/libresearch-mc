@@ -1,0 +1,9 @@
+{
+  "display": "Obsidian",
+  "match": { "blocks": ["minecraft:obsidian"] },
+  "cost": 1,
+  "cards": [
+    { "card": "libresearch:dye_study", "count": 1 },
+    { "card": "libresearch:lime_focus", "count": 1 }
+  ]
+}

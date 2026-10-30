@@ -1,0 +1,13 @@
+{
+  "display": "Tinker",
+  "cost": 1,
+  "weight": 1,
+  "discipline": "iron",
+  "bonus_only": true,
+  "requires": [
+    { "type": "item", "item": "minecraft:iron_ingot", "count": 1, "consume": true }
+  ],
+  "effects": [
+    { "type": "progress", "target": "self", "amount": 20 }
+  ]
+}

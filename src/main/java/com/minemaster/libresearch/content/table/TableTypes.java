@@ -3,7 +3,7 @@ package com.minemaster.libresearch.content.table;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.minemaster.libresearch.LibResearch;
-import com.mojang.serialization.JsonOps;
+import com.minemaster.libresearch.data.JsonLoad;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
@@ -30,8 +30,7 @@ public final class TableTypes extends SimpleJsonResourceReloadListener {
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager resourceManager, ProfilerFiller profiler) {
         Map<ResourceLocation, TableType> parsed = new HashMap<>();
-        files.forEach((id, json) -> TableType.CODEC.parse(JsonOps.INSTANCE, json)
-                .resultOrPartial(error -> LibResearch.LOGGER.error("Не удалось прочитать тип стола {}: {}", id, error))
+        files.forEach((id, json) -> JsonLoad.parse(TableType.CODEC, json, id, "тип стола")
                 .ifPresent(type -> parsed.put(id, type)));
         byId = Map.copyOf(parsed);
         LibResearch.LOGGER.info("Загружено типов столов: {}", byId.size());

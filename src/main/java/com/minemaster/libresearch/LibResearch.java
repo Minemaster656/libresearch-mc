@@ -1,6 +1,7 @@
 package com.minemaster.libresearch;
 
 import com.minemaster.libresearch.data.DataEvents;
+import com.minemaster.libresearch.data.LibCommands;
 import com.minemaster.libresearch.registry.ModBlockEntities;
 import com.minemaster.libresearch.registry.ModBlocks;
 import com.minemaster.libresearch.registry.ModCreativeTabs;
@@ -37,6 +38,7 @@ public class LibResearch {
 
         modBus.addListener(this::registerCapabilities);
         NeoForge.EVENT_BUS.addListener(DataEvents::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(LibCommands::register);
     }
 
     public static ResourceLocation id(String path) {

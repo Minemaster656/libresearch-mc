@@ -1,0 +1,14 @@
+{
+  "display": "Balance",
+  "cost": 1,
+  "weight": 1,
+  "spawn": {
+    "requirements": [
+      { "type": "progress", "min_disciplines": 2 }
+    ]
+  },
+  "effects": [
+    { "type": "progress", "target": "all_equalize", "amount": 0 },
+    { "type": "full_value_slots", "amount": 1 }
+  ]
+}

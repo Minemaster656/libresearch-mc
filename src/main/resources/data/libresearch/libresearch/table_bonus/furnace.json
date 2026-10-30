@@ -1,0 +1,8 @@
+{
+  "display": "Furnace",
+  "match": { "blocks": ["minecraft:furnace"] },
+  "cost": 1,
+  "cards": [
+    { "card": "libresearch:tinker", "count": 1 }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "display": "Bedrock",
+  "match": { "blocks": ["minecraft:bedrock"] },
+  "cost": 1,
+  "cards": [
+    { "card": "libresearch:lime_focus", "count": 2 }
+  ]
+}

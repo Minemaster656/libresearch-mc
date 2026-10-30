@@ -1,0 +1,8 @@
+{
+  "display": "Stone",
+  "match": { "blocks": ["minecraft:stone"] },
+  "cost": 1,
+  "cards": [
+    { "card": "libresearch:dye_study", "count": 2 }
+  ]
+}

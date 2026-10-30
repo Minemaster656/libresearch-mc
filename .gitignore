@@ -2,3 +2,8 @@ sources/
 temp/
 local/
 build/
+.gradle/
+run/
+runs/
+.idea/
+*.iml

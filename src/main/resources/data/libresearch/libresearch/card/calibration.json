@@ -1,0 +1,10 @@
+{
+  "display": "Calibration",
+  "cost": 1,
+  "weight": 1,
+  "discipline": "copper",
+  "effects": [
+    { "type": "progress", "target": "self", "amount": 15 },
+    { "type": "bonus_draws", "amount": 1 }
+  ]
+}

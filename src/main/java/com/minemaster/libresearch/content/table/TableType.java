@@ -5,7 +5,9 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Определение типа стола: какие дисциплины он знает и какие бонусные блоки
@@ -14,14 +16,21 @@ import java.util.List;
  * <p>Файл: {@code data/<namespace>/libresearch/table_type/<id>.json}.
  * Типов столов может быть сколько угодно; блок лишь ссылается на id типа.</p>
  */
-public record TableType(String display, List<Discipline> disciplines, List<BonusBlock> bonusBlocks) {
+public record TableType(String display, List<Discipline> disciplines, List<ResourceLocation> bonusBlocks) {
     public static final Codec<TableType> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.fieldOf("display").forGetter(TableType::display),
             Discipline.CODEC.listOf().optionalFieldOf("disciplines", List.of()).forGetter(TableType::disciplines),
-            BonusBlock.CODEC.listOf().optionalFieldOf("bonus_blocks", List.of()).forGetter(TableType::bonusBlocks)
+            ResourceLocation.CODEC.listOf().optionalFieldOf("bonus_blocks", List.of()).forGetter(TableType::bonusBlocks)
     ).apply(instance, TableType::new));
 
     public static final TableType EMPTY = new TableType("libresearch.table.empty", List.of(), List.of());
+
+    /** Уникальные id дисциплин — для проверки ссылок из карт. */
+    public Set<String> disciplineIds() {
+        Set<String> ids = new LinkedHashSet<>();
+        disciplines.forEach(discipline -> ids.add(discipline.id()));
+        return ids;
+    }
 
     /**
      * Дисциплина: куда копится прогресс и что выдаётся за очки.
@@ -37,22 +46,6 @@ public record TableType(String display, List<Discipline> disciplines, List<Bonus
                 ResourceLocation.CODEC.fieldOf("payout").forGetter(Discipline::payout),
                 Codec.INT.optionalFieldOf("count_per_point", 1).forGetter(Discipline::countPerPoint)
         ).apply(instance, Discipline::new));
-    }
-
-    /**
-     * Бонусный блок у стола.
-     *
-     * <p>В GUI показываются все записи из этого списка: недостающий блок — тусклый,
-     * присутствующий рядом — обычный, выбранный игроком — подсвеченный; тултип
-     * подсказывает, какой это блок.</p>
-     */
-    public record BonusBlock(ResourceLocation block, String display, List<ResourceLocation> cards, int cost) {
-        public static final Codec<BonusBlock> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                ResourceLocation.CODEC.fieldOf("block").forGetter(BonusBlock::block),
-                Codec.STRING.fieldOf("display").forGetter(BonusBlock::display),
-                ResourceLocation.CODEC.listOf().optionalFieldOf("cards", List.of()).forGetter(BonusBlock::cards),
-                Codec.INT.optionalFieldOf("cost", 1).forGetter(BonusBlock::cost)
-        ).apply(instance, BonusBlock::new));
     }
 
     /** Цвет в JSON — строка {@code "#RRGGBB"}. */

@@ -1,0 +1,8 @@
+{
+  "display": "Blast Furnace",
+  "match": { "blocks": ["minecraft:blast_furnace"] },
+  "cost": 1,
+  "cards": [
+    { "card": "libresearch:refusal", "count": 1 }
+  ]
+}

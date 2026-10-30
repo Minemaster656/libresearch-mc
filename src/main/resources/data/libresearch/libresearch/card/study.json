@@ -1,0 +1,9 @@
+{
+  "display": "Study",
+  "cost": 1,
+  "weight": 3,
+  "bonus_only": false,
+  "effects": [
+    { "type": "progress", "target": "random", "amount": { "min": 15, "max": 25 } }
+  ]
+}

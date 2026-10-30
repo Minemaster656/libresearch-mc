@@ -1,0 +1,9 @@
+{
+  "display": "Enchanting Table",
+  "match": { "blocks": ["minecraft:enchanting_table"] },
+  "cost": 1,
+  "cards": [
+    { "card": "libresearch:study", "count": 1 },
+    { "card": "libresearch:gift", "count": 1 }
+  ]
+}

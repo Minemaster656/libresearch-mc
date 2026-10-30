@@ -1,0 +1,8 @@
+{
+  "display": "Gift",
+  "cost": 1,
+  "weight": 1,
+  "effects": [
+    { "type": "give_item", "item": "minecraft:copper_ingot", "count": { "min": 1, "max": 2 } }
+  ]
+}
