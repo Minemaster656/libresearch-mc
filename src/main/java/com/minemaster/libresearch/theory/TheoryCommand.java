@@ -68,7 +68,7 @@ public final class TheoryCommand {
             return 0;
         }
 
-        Optional<ResearchTableBlockEntity> table = Tables.lookedAt(player);
+        Optional<ResearchTableBlockEntity> table = Tables.lookedAtOrNearest(player, Tables.REACH);
         if (table.isEmpty()) {
             source.sendFailure(Component.literal("Посмотрите на стол исследований (до 8 блоков)."));
             return 0;

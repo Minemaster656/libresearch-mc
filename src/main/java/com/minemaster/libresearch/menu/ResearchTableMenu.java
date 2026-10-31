@@ -8,6 +8,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
@@ -23,12 +24,57 @@ public class ResearchTableMenu extends AbstractContainerMenu {
     public static final int PLAYER_SLOTS = 36;
 
     private static final int PLAYER_INV_X = 89;
-    private static final int PLAYER_INV_Y = 180;
-    private static final int HOTBAR_Y = 236;
+    private static final int PLAYER_INV_Y = 194;
+    private static final int HOTBAR_Y = 250;
 
+    private final Inventory inventory;
     @Nullable
-    private final ResearchTableBlockEntity table;
+    private ResearchTableBlockEntity table;
     private final BlockPos pos;
+    private final ItemStackHandler fallback = new ItemStackHandler(TABLE_SLOTS);
+    private final IItemHandlerModifiable lazyHandler = new IItemHandlerModifiable() {
+        private IItemHandler delegate() {
+            ResearchTableBlockEntity found = table();
+            return found != null ? found.getInventory() : fallback;
+        }
+
+        @Override
+        public int getSlots() {
+            return TABLE_SLOTS;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return delegate().getStackInSlot(slot);
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            return delegate().insertItem(slot, stack, simulate);
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return delegate().extractItem(slot, amount, simulate);
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return delegate().getSlotLimit(slot);
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return delegate().isItemValid(slot, stack);
+        }
+
+        @Override
+        public void setStackInSlot(int slot, ItemStack stack) {
+            if (delegate() instanceof IItemHandlerModifiable modifiable) {
+                modifiable.setStackInSlot(slot, stack);
+            }
+        }
+    };
 
     /** Клиентский конструктор: BlockEntity берётся из уровня по позиции. */
     public ResearchTableMenu(int id, Inventory inventory, BlockPos pos) {
@@ -44,11 +90,11 @@ public class ResearchTableMenu extends AbstractContainerMenu {
     private ResearchTableMenu(int id, Inventory inventory, @Nullable ResearchTableBlockEntity table, BlockPos pos) {
         super(ModMenus.RESEARCH_TABLE.get(), id);
         this.table = table;
+        this.inventory = inventory;
         this.pos = pos;
 
-        IItemHandler handler = table != null ? table.getInventory() : new ItemStackHandler(TABLE_SLOTS);
-        addSlot(new SlotItemHandler(handler, ResearchTableBlockEntity.SLOT_INKWELL, 10, 20));
-        addSlot(new SlotItemHandler(handler, ResearchTableBlockEntity.SLOT_PAPER, 32, 20));
+        addSlot(new SlotItemHandler(lazyHandler, ResearchTableBlockEntity.SLOT_INKWELL, 10, 20));
+        addSlot(new SlotItemHandler(lazyHandler, ResearchTableBlockEntity.SLOT_PAPER, 32, 20));
 
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
@@ -61,8 +107,17 @@ public class ResearchTableMenu extends AbstractContainerMenu {
         }
     }
 
+    /**
+     * BlockEntity стола. На клиенте может быть ещё не загружен в момент открытия
+     * меню (блок и экран приходят разными пакетами), поэтому ищем лениво.
+     */
     @Nullable
     public ResearchTableBlockEntity table() {
+        if (table == null) {
+            if (inventory.player.level().getBlockEntity(pos) instanceof ResearchTableBlockEntity found) {
+                table = found;
+            }
+        }
         return table;
     }
 

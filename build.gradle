@@ -77,6 +77,12 @@ tasks.withType(JavaCompile).configureEach {
 // mkfifo /tmp/opencode/server.in && ./gradlew runServer < /tmp/opencode/server.in
 tasks.matching { it.name == 'runServer' || it.name == 'runClient' || it.name == 'runData' }.configureEach {
     standardInput = System.in
+    if (project.hasProperty('clientArgs')) {
+        args project.property('clientArgs').toString().split(' ')
+    }
+    if (project.hasProperty('uitest')) {
+        systemProperty 'libresearch.uitest', 'true'
+    }
 }
 
 tasks.named('processResources', ProcessResources).configure {

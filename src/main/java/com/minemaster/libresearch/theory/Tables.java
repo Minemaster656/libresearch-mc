@@ -16,6 +16,29 @@ public final class Tables {
     private Tables() {
     }
 
+    /** Ближайший стол в радиусе; используется командами, когда игрок никуда не смотрит. */
+    public static Optional<ResearchTableBlockEntity> nearest(ServerPlayer player, double radius) {
+        BlockPos center = player.blockPosition();
+        int r = (int) Math.ceil(radius);
+        double best = Double.MAX_VALUE;
+        ResearchTableBlockEntity found = null;
+        for (BlockPos pos : BlockPos.betweenClosed(center.offset(-r, -4, -r), center.offset(r, 4, r))) {
+            if (player.level().getBlockEntity(pos) instanceof ResearchTableBlockEntity table) {
+                double distance = player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                if (distance <= radius * radius && distance < best) {
+                    best = distance;
+                    found = table;
+                }
+            }
+        }
+        return Optional.ofNullable(found);
+    }
+
+    /** Сначала стол, на который смотрит игрок, иначе — ближайший. */
+    public static Optional<ResearchTableBlockEntity> lookedAtOrNearest(ServerPlayer player, double radius) {
+        return lookedAt(player).or(() -> nearest(player, radius));
+    }
+
     public static Optional<ResearchTableBlockEntity> lookedAt(ServerPlayer player) {
         HitResult hit = player.pick(REACH, 0.0F, false);
         if (!(hit instanceof BlockHitResult blockHit)) {

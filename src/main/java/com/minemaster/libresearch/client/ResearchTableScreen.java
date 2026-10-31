@@ -41,7 +41,7 @@ import java.util.Set;
  */
 public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMenu> {
     private static final int W = 340;
-    private static final int H = 256;
+    private static final int H = 270;
 
     private static final int BG = 0xF02B2320;
     private static final int PANEL = 0xFF3A2F29;
@@ -144,6 +144,11 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         int mx = mouseX - leftPos;
         int my = mouseY - topPos;
 
+        // renderBg вызывается ДО сдвига на leftPos/topPos (в отличие от слотов),
+        // поэтому весь наш рендер идёт в локальных координатах панели.
+        graphics.pose().pushPose();
+        graphics.pose().translate(leftPos, topPos, 0);
+
         graphics.fill(0, 0, W, H, BG);
         graphics.renderOutline(0, 0, W, H, BORDER);
         graphics.fill(0, 0, W, 40, PANEL);
@@ -155,6 +160,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         TheoryState theory = theory();
         if (table == null || theory == null) {
             graphics.drawString(font, "Нет данных стола", LEFT, 46, RED, false);
+            graphics.pose().popPose();
             return;
         }
 
@@ -166,6 +172,8 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         } else {
             renderRewards(graphics, theory, mx, my);
         }
+
+        graphics.pose().popPose();
     }
 
     // ---------------------------------------------------------------- setup
@@ -212,6 +220,21 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         button(graphics, LEFT, 140, LEFT_W, 18, "Начать теорию", canStart, mx, my);
         if (in(LEFT, 140, LEFT_W, 18, mx, my)) {
             tooltip = startBlocker();
+        }
+
+        // Подсказка, если ресурсы лежат в инвентаре, а не в слотах стола.
+        if (table != null && minecraft != null && minecraft.player != null) {
+            int paperInSlot = table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_PAPER).getCount();
+            boolean paperInInv = minecraft.player.getInventory().contains(new ItemStack(net.minecraft.world.item.Items.PAPER));
+            boolean inkInSlot = !table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_INKWELL).isEmpty();
+            int hintY = 164;
+            if (paperInSlot < 1 && paperInInv) {
+                graphics.drawString(font, "Бумага есть в инвентаре —", LEFT, hintY, GOLD, false);
+                graphics.drawString(font, "положите её в правый слот стола.", LEFT, hintY + 10, GOLD, false);
+            } else if (!inkInSlot && minecraft.player.getInventory().contains(new ItemStack(com.minemaster.libresearch.registry.ModItems.INKWELL.get()))) {
+                graphics.drawString(font, "Чернильница есть в инвентаре —", LEFT, hintY, GOLD, false);
+                graphics.drawString(font, "положите её в левый слот стола.", LEFT, hintY + 10, GOLD, false);
+            }
         }
 
         int textX = RIGHT;
@@ -451,9 +474,10 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
     // -------------------------------------------------------------- rewards
 
     private void renderRewards(GuiGraphics graphics, TheoryState theory, int mx, int my) {
-        graphics.drawString(font, "Заберите награды", RIGHT, 46, GOLD, false);
-        graphics.drawString(font, "Новая теория начнётся", RIGHT, 58, DIM, false);
-        graphics.drawString(font, "после забора целых очков.", RIGHT, 68, DIM, false);
+        graphics.drawString(font, "Награды", LEFT, 46, GOLD, false);
+        graphics.drawString(font, "Новая теория", LEFT, 62, DIM, false);
+        graphics.drawString(font, "начнётся после", LEFT, 72, DIM, false);
+        graphics.drawString(font, "забора целых очков.", LEFT, 82, DIM, false);
 
         Knowledge knowledge = PlayerKnowledge.get(minecraft.player);
         int row = 0;
@@ -463,7 +487,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                 continue;
             }
             int x = RIGHT;
-            int y = 86 + row * 22;
+            int y = 46 + row * 22;
             long claimable = KnowledgeMath.claimablePoints(reward, knowledge.centi(discipline.id()));
             ItemStack stack = payout(discipline, claimable);
             int background = claimable > 0 ? 0xFF4A3C33 : 0xFF2A211C;
@@ -491,8 +515,8 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
             row++;
         }
 
-        button(graphics, RIGHT, 152, 120, 18, "Забрать всё", true, mx, my);
-        if (in(RIGHT, 152, 120, 18, mx, my)) {
+        button(graphics, LEFT, 108, LEFT_W, 18, "Забрать всё", true, mx, my);
+        if (in(LEFT, 108, LEFT_W, 18, mx, my)) {
             tooltip = List.of(Component.literal("Забрать все доступные награды")
                     .withStyle(ChatFormatting.GRAY));
         }
@@ -516,15 +540,15 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
     }
 
     private void drawSlotFrames(GuiGraphics graphics) {
-        frame(graphics, 10, 22);
-        frame(graphics, 32, 22);
+        frame(graphics, 10, 20);
+        frame(graphics, 32, 20);
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
-                frame(graphics, 89 + column * 18, 180 + row * 18);
+                frame(graphics, 89 + column * 18, 194 + row * 18);
             }
         }
         for (int column = 0; column < 9; column++) {
-            frame(graphics, 89 + column * 18, 236);
+            frame(graphics, 89 + column * 18, 250);
         }
     }
 
@@ -572,16 +596,18 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                 int x = LEFT + (index % 6) * 20;
                 int y = 58 + (index / 6) * 20;
                 if (in(x, y, 18, 18, mx, my)) {
-                    ResourceLocation id = bonuses.get(index);
-                    if (detected.contains(id)) {
-                        send(ModNetwork.Action.TOGGLE_BONUS, 0, id.toString());
-                    }
+                    // Шлём всегда: если блока рядом нет, сервер ответит причиной.
+                    send(ModNetwork.Action.TOGGLE_BONUS, 0, bonuses.get(index).toString());
                     return true;
                 }
             }
             if (in(LEFT, 140, LEFT_W, 18, mx, my)) {
                 if (canStart(theory)) {
                     send(ModNetwork.Action.START, 0, "");
+                } else {
+                    for (Component line : startBlocker()) {
+                        minecraft.player.displayClientMessage(line, true);
+                    }
                 }
                 return true;
             }
@@ -616,7 +642,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                 if (reward <= 0) {
                     continue;
                 }
-                int y = 86 + rewardRow(theory, discipline.id()) * 22;
+                int y = 46 + rewardRow(theory, discipline.id()) * 22;
                 if (in(RIGHT, y, 182, 20, mx, my)) {
                     if (KnowledgeMath.claimablePoints(reward, knowledge.centi(discipline.id())) > 0) {
                         send(ModNetwork.Action.CLAIM, 0, discipline.id());
@@ -624,7 +650,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                     return true;
                 }
             }
-            if (in(RIGHT, 152, 120, 18, mx, my)) {
+            if (in(LEFT, 108, LEFT_W, 18, mx, my)) {
                 send(ModNetwork.Action.CLAIM_ALL, 0, "");
                 return true;
             }
