@@ -8,6 +8,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Автотест интерфейса для разработки: запускается только с
@@ -68,27 +69,41 @@ public final class UiTest {
             case 3 -> {
                 if (ticks > 20) {
                     shot(minecraft, "uitest-2-setup-selected");
-                    click(minecraft, 10 + 60, 140 + 9); // «Начать теорию»
+                    hover(minecraft, 32 + 8, 20 + 8); // слот бумаги — проверяем тултип предмета
                     next();
                 }
             }
             case 4 -> {
                 if (ticks > 20) {
-                    shot(minecraft, "uitest-3-play");
-                    click(minecraft, 10 + 60, 58 + 13); // «Добор»
+                    shot(minecraft, "uitest-3-tooltip");
+                    click(minecraft, 10 + 60, 140 + 9); // «Начать теорию»
                     next();
                 }
             }
             case 5 -> {
                 if (ticks > 20) {
-                    shot(minecraft, "uitest-4-hand");
-                    click(minecraft, 140 + 29, 44 + 50); // первая карта
+                    shot(minecraft, "uitest-4-play");
+                    click(minecraft, 10 + 60, 58 + 13); // «Добор»
                     next();
                 }
             }
             case 6 -> {
                 if (ticks > 20) {
-                    shot(minecraft, "uitest-5-after-card");
+                    shot(minecraft, "uitest-5-hand");
+                    hover(minecraft, 140 + 29, 44 + 50); // первая карта — тултип карты
+                    next();
+                }
+            }
+            case 7 -> {
+                if (ticks > 20) {
+                    shot(minecraft, "uitest-6-card-tooltip");
+                    click(minecraft, 140 + 29, 44 + 50); // первая карта
+                    next();
+                }
+            }
+            case 8 -> {
+                if (ticks > 20) {
+                    shot(minecraft, "uitest-7-after-card");
                     command(minecraft, "libresearch theory set copper 40");
                     command(minecraft, "libresearch theory set iron 115");
                     command(minecraft, "libresearch theory inspiration 0");
@@ -96,21 +111,21 @@ public final class UiTest {
                     next();
                 }
             }
-            case 7 -> {
+            case 9 -> {
                 if (ticks > 20) {
-                    shot(minecraft, "uitest-6-rewards");
+                    shot(minecraft, "uitest-8-rewards");
                     // вторая строка = железо (115% = 1 целое очко); медь (40%) забрать нельзя
                     click(minecraft, 140 + 90, 68 + 10);
                     next();
                 }
             }
-            case 8 -> {
+            case 10 -> {
                 if (ticks > 20) {
-                    shot(minecraft, "uitest-7-after-claim");
+                    shot(minecraft, "uitest-9-after-claim");
                     next();
                 }
             }
-            case 9 -> {
+            case 11 -> {
                 if (ticks > 20) {
                     LibResearch.LOGGER.info("UiTest: сценарий завершён");
                     System.exit(0);
@@ -149,6 +164,20 @@ public final class UiTest {
         int top = (screen.height - PANEL_H) / 2;
         LibResearch.LOGGER.info("UiTest: клик {}x{}", x, y);
         screen.mouseClicked(left + x, top + y, 0);
+    }
+
+    /** Наводит системный курсор на точку панели (для проверки тултипов). */
+    private static void hover(Minecraft minecraft, int x, int y) {
+        Screen screen = minecraft.screen;
+        if (screen == null) {
+            return;
+        }
+        int left = (screen.width - PANEL_W) / 2;
+        int top = (screen.height - PANEL_H) / 2;
+        double scale = minecraft.getWindow().getGuiScale();
+        GLFW.glfwSetCursorPos(minecraft.getWindow().getWindow(),
+                (left + x) * scale, (top + y) * scale);
+        LibResearch.LOGGER.info("UiTest: наведение на {}x{}", x, y);
     }
 
     private static void shot(Minecraft minecraft, String name) {
