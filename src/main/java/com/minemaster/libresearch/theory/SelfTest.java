@@ -95,6 +95,29 @@ public final class SelfTest {
             check(passed, failures, "в запасе осталось 15 санти-очков",
                     PlayerKnowledge.get(player).centi("copper") == 15L);
             check(passed, failures, "старт снова разрешён", TheoryEngine.start(ctx).ok());
+
+            // Бонусный блок: сканирование, выбор, стоимость, бонусная колода.
+            TheoryEngine.discard(ctx);
+            BlockPos bonusPos = pos.offset(0, 0, 2);
+            var previousState = level.getBlockState(bonusPos);
+            level.setBlockAndUpdate(bonusPos, net.minecraft.world.level.block.Blocks.CRAFTING_TABLE.defaultBlockState());
+            try {
+                var found = BonusScanner.scan(level, pos, ctx.type());
+                check(passed, failures, "сканер нашёл верстак рядом",
+                        found.contains(com.minemaster.libresearch.LibResearch.id("crafting_table")));
+                check(passed, failures, "бонус выбирается",
+                        TheoryEngine.toggleBonus(ctx, "libresearch:crafting_table").ok());
+                check(passed, failures, "бонус отмечен выбранным",
+                        theory.selectedBonuses().contains("libresearch:crafting_table"));
+                check(passed, failures, "старт с бонусом", TheoryEngine.start(ctx).ok());
+                check(passed, failures, "бонус списал 1 вдохновение",
+                        theory.startInspiration() == 4 && theory.inspiration() == 4);
+                check(passed, failures, "бонусная колода собрана: 3 карты", theory.bonusDeck().size() == 3);
+                check(passed, failures, "выбор бонуса очищен после старта", theory.selectedBonuses().isEmpty());
+                TheoryEngine.discard(ctx);
+            } finally {
+                level.setBlockAndUpdate(bonusPos, previousState);
+            }
         } catch (RuntimeException exception) {
             failures.add("исключение: " + exception);
         } finally {

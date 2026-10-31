@@ -61,10 +61,65 @@ public final class TheoryEngine {
             return Result.fail("Нужна чернильница с чернилами в слоте.");
         }
 
-        int inspiration = KnowledgeMath.startInspiration(0, 0);
+        int base = KnowledgeMath.startInspiration(0, 0);
+        java.util.Set<ResourceLocation> detected = BonusScanner.scan(ctx.player().serverLevel(),
+                ctx.table().getBlockPos(), ctx.type());
+
+        int cost = 0;
+        List<ResourceLocation> deck = new ArrayList<>();
+        for (String selectedId : theory.selectedBonuses()) {
+            ResourceLocation id = ResourceLocation.tryParse(selectedId);
+            if (id == null || !detected.contains(id)) {
+                continue;
+            }
+            Optional<com.minemaster.libresearch.content.bonus.BonusBlockDefinition> optional =
+                    com.minemaster.libresearch.content.bonus.TableBonuses.INSTANCE.get(id);
+            if (optional.isEmpty()) {
+                continue;
+            }
+            com.minemaster.libresearch.content.bonus.BonusBlockDefinition bonus = optional.get();
+            cost += Math.max(0, bonus.cost());
+            bonus.cards().forEach(entry -> {
+                for (int copy = 0; copy < Math.max(0, entry.count()); copy++) {
+                    deck.add(entry.card());
+                }
+            });
+        }
+
+        int inspiration = base - cost;
+        if (inspiration < 1) {
+            return Result.fail("Слишком много бонусов: нужно оставить хотя бы 1 вдохновение.");
+        }
+
         theory.start(inspiration, ctx.type().disciplines().size());
+        theory.setBonusDeck(deck);
         ctx.markUpdated();
-        return Result.ok("Теория начата. Вдохновение " + inspiration + "/" + inspiration + ".");
+        return Result.ok("Теория начата. Вдохновение " + inspiration + "/" + base
+                + (deck.isEmpty() ? "." : ", бонусных карт в колоде: " + deck.size() + "."));
+    }
+
+    /** Выбор/снятие бонусного блока до старта теории. */
+    public static Result toggleBonus(TableContext ctx, String bonusId) {
+        TheoryState theory = ctx.theory();
+        if (theory.isActive()) {
+            return Result.fail("Нельзя менять бонусы, пока идёт теория.");
+        }
+        ResourceLocation id = ResourceLocation.tryParse(bonusId);
+        if (id == null || !ctx.type().bonusBlocks().contains(id)) {
+            return Result.fail("Этот стол не знает бонус " + bonusId + ".");
+        }
+        if (com.minemaster.libresearch.content.bonus.TableBonuses.INSTANCE.get(id).isEmpty()) {
+            return Result.fail("Бонус " + bonusId + " не загружен.");
+        }
+        java.util.Set<ResourceLocation> detected = BonusScanner.scan(ctx.player().serverLevel(),
+                ctx.table().getBlockPos(), ctx.type());
+        if (!detected.contains(id)) {
+            return Result.fail("Рядом со столом нет этого блока.");
+        }
+
+        boolean selected = theory.toggleBonus(bonusId);
+        ctx.markUpdated();
+        return Result.ok((selected ? "Выбран бонус " : "Снят бонус ") + bonusId + ".");
     }
 
     public static Result draw(TableContext ctx) {
@@ -306,8 +361,19 @@ public final class TheoryEngine {
     private static List<DrawnCard> drawHand(TableContext ctx, int size) {
         List<DrawnCard> hand = new ArrayList<>();
         Set<ResourceLocation> used = new HashSet<>();
+        boolean bonusTaken = false;
 
         for (int slot = 0; slot < size; slot++) {
+            if (!bonusTaken && !ctx.theory().bonusDeck().isEmpty() && ctx.random().nextFloat() < 0.25F) {
+                DrawnCard bonus = tryDrawBonus(ctx, used);
+                if (bonus != null) {
+                    hand.add(bonus);
+                    used.add(bonus.card());
+                    bonusTaken = true;
+                    continue;
+                }
+            }
+
             List<WeightedPool.Option<ResourceLocation>> options = new ArrayList<>();
             for (Map.Entry<ResourceLocation, Card> entry : Cards.INSTANCE.all().entrySet()) {
                 if (used.contains(entry.getKey()) || !isDrawable(entry.getValue(), ctx)) {
@@ -328,6 +394,55 @@ public final class TheoryEngine {
             used.add(id);
         }
         return hand;
+    }
+
+    /**
+     * Бонусная ветка добора: с шансом 25% на слот вместо обычной карты берётся
+     * запись из конечной бонусной колоды. Невалидная запись не удаляется —
+     * просто не подходит на этот раз (как в описании механики).
+     */
+    private static DrawnCard tryDrawBonus(TableContext ctx, Set<ResourceLocation> used) {
+        TheoryState theory = ctx.theory();
+        for (int attempt = 0; attempt < 10000; attempt++) {
+            List<ResourceLocation> deck = theory.bonusDeck();
+            if (deck.isEmpty()) {
+                return null;
+            }
+            int index = ctx.random().nextInt(deck.size());
+            ResourceLocation id = deck.get(index);
+            Optional<Card> optional = Cards.INSTANCE.get(id);
+            if (optional.isEmpty()) {
+                theory.removeBonusCard(index);
+                continue;
+            }
+            Card card = optional.get();
+            if (used.contains(id) || !isBonusDrawable(card, ctx)) {
+                continue;
+            }
+            theory.removeBonusCard(index);
+            return CardRoller.roll(id, card, ctx);
+        }
+        return null;
+    }
+
+    /** Бонусная карта не требует открытой дисциплины — только чтобы она не была заблокирована. */
+    private static boolean isBonusDrawable(Card card, TableContext ctx) {
+        if (card.cost() > ctx.theory().inspiration()) {
+            return false;
+        }
+        Optional<String> discipline = card.discipline();
+        if (discipline.isPresent()) {
+            String id = discipline.get();
+            if (!id.equals("random") && !id.equals("self")) {
+                if (!ctx.type().disciplineIds().contains(id)) {
+                    return false;
+                }
+                if (ctx.theory().isBlocked(id)) {
+                    return false;
+                }
+            }
+        }
+        return RequirementChecker.check(card.spawn().requirements(), null, ctx).ok();
     }
 
     private static boolean isDrawable(Card card, TableContext ctx) {

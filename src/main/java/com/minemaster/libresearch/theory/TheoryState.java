@@ -32,6 +32,8 @@ public final class TheoryState {
     private final Set<String> blocked = new LinkedHashSet<>();
     private final List<DrawnCard> hand = new ArrayList<>();
     private final Map<String, Long> rewards = new LinkedHashMap<>();
+    private final Set<String> selectedBonuses = new LinkedHashSet<>();
+    private final List<net.minecraft.resources.ResourceLocation> bonusDeck = new ArrayList<>();
 
     public boolean isActive() {
         return active;
@@ -46,6 +48,8 @@ public final class TheoryState {
         this.progress.clear();
         this.blocked.clear();
         this.hand.clear();
+        this.bonusDeck.clear();
+        this.selectedBonuses.clear();
     }
 
     /** Завершение или добровольный сброс: теория стирается, награды остаются. */
@@ -58,6 +62,8 @@ public final class TheoryState {
         progress.clear();
         blocked.clear();
         hand.clear();
+        bonusDeck.clear();
+        selectedBonuses.clear();
     }
 
     public int inspiration() {
@@ -159,6 +165,41 @@ public final class TheoryState {
         return rewards.values().stream().anyMatch(KnowledgeMath::hasPendingReward);
     }
 
+    // --- бонусные блоки (выбираются до старта) ---
+
+    public Set<String> selectedBonuses() {
+        return Set.copyOf(selectedBonuses);
+    }
+
+    /** @return {@code true}, если бонус теперь выбран */
+    public boolean toggleBonus(String bonusId) {
+        if (selectedBonuses.remove(bonusId)) {
+            return false;
+        }
+        selectedBonuses.add(bonusId);
+        return true;
+    }
+
+    public void clearSelectedBonuses() {
+        selectedBonuses.clear();
+    }
+
+    /** Конечная колода бонусных карт: записи удаляются по мере выпадения. */
+    public List<net.minecraft.resources.ResourceLocation> bonusDeck() {
+        return List.copyOf(bonusDeck);
+    }
+
+    public void setBonusDeck(List<net.minecraft.resources.ResourceLocation> cards) {
+        bonusDeck.clear();
+        bonusDeck.addAll(cards);
+    }
+
+    public void removeBonusCard(int index) {
+        if (index >= 0 && index < bonusDeck.size()) {
+            bonusDeck.remove(index);
+        }
+    }
+
     public void save(CompoundTag tag) {
         tag.putBoolean("active", active);
         tag.putInt("inspiration", inspiration);
@@ -181,6 +222,14 @@ public final class TheoryState {
         CompoundTag rewardsTag = new CompoundTag();
         rewards.forEach(rewardsTag::putLong);
         tag.put("rewards", rewardsTag);
+
+        ListTag selectedTag = new ListTag();
+        selectedBonuses.forEach(bonus -> selectedTag.add(StringTag.valueOf(bonus)));
+        tag.put("selected_bonuses", selectedTag);
+
+        ListTag deckTag = new ListTag();
+        bonusDeck.forEach(card -> deckTag.add(StringTag.valueOf(card.toString())));
+        tag.put("bonus_deck", deckTag);
     }
 
     public void load(CompoundTag tag) {
@@ -209,5 +258,21 @@ public final class TheoryState {
         rewards.clear();
         CompoundTag rewardsTag = tag.getCompound("rewards");
         rewardsTag.getAllKeys().forEach(discipline -> rewards.put(discipline, rewardsTag.getLong(discipline)));
+
+        selectedBonuses.clear();
+        ListTag selectedTag = tag.getList("selected_bonuses", Tag.TAG_STRING);
+        for (int i = 0; i < selectedTag.size(); i++) {
+            selectedBonuses.add(selectedTag.getString(i));
+        }
+
+        bonusDeck.clear();
+        ListTag deckTag = tag.getList("bonus_deck", Tag.TAG_STRING);
+        for (int i = 0; i < deckTag.size(); i++) {
+            net.minecraft.resources.ResourceLocation id =
+                    net.minecraft.resources.ResourceLocation.tryParse(deckTag.getString(i));
+            if (id != null) {
+                bonusDeck.add(id);
+            }
+        }
     }
 }

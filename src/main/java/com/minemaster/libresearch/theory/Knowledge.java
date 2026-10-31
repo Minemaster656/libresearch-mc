@@ -2,7 +2,10 @@ package com.minemaster.libresearch.theory;
 
 import com.minemaster.libresearch.core.KnowledgeMath;
 import com.mojang.serialization.Codec;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -17,6 +20,12 @@ public record Knowledge(Map<String, Long> centi) {
 
     public static final Codec<Knowledge> CODEC = Codec.unboundedMap(Codec.STRING, Codec.LONG)
             .xmap(Knowledge::new, Knowledge::centi);
+
+    /** Синхронизация запаса клиенту: GUI решает, какие дисциплины уже видны. */
+    public static final StreamCodec<io.netty.buffer.ByteBuf, Knowledge> STREAM_CODEC =
+            ByteBufCodecs.<io.netty.buffer.ByteBuf, String, Long, HashMap<String, Long>>map(HashMap::new,
+                            ByteBufCodecs.STRING_UTF8, ByteBufCodecs.VAR_LONG)
+                    .map(Knowledge::new, knowledge -> new HashMap<>(knowledge.centi()));
 
     public long centi(String discipline) {
         return centi.getOrDefault(discipline, 0L);

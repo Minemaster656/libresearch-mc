@@ -16,6 +16,7 @@ public final class ModAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Knowledge>> KNOWLEDGE =
             ATTACHMENT_TYPES.register("knowledge", () -> AttachmentType.builder(() -> Knowledge.EMPTY)
                     .serialize(Knowledge.CODEC)
+                    .sync(Knowledge.STREAM_CODEC)
                     .copyOnDeath()
                     .build());
 

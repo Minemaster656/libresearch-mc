@@ -3,6 +3,8 @@ package com.minemaster.libresearch;
 import com.minemaster.libresearch.data.DataEvents;
 import com.minemaster.libresearch.data.LibCommands;
 import com.minemaster.libresearch.data.ModAttachments;
+import com.minemaster.libresearch.menu.ModMenus;
+import com.minemaster.libresearch.network.ModNetwork;
 import com.minemaster.libresearch.registry.ModBlockEntities;
 import com.minemaster.libresearch.registry.ModBlocks;
 import com.minemaster.libresearch.registry.ModCreativeTabs;
@@ -36,9 +38,11 @@ public class LibResearch {
         ModBlocks.BLOCKS.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modBus);
+        ModMenus.MENUS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
 
         modBus.addListener(this::registerCapabilities);
+        modBus.addListener(ModNetwork::register);
         NeoForge.EVENT_BUS.addListener(DataEvents::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(LibCommands::register);
     }

@@ -4,5 +4,6 @@
   "item.libresearch.inkwell": "Чернильница",
   "itemGroup.libresearch": "LibResearch",
   "tooltip.libresearch.inkwell_charges": "Чернила: %s / %s",
+  "container.libresearch.research_table": "Стол исследований",
   "libresearch.table.empty": "Неизвестный тип стола"
 }
