@@ -175,9 +175,11 @@ public final class UiTest {
         int left = (screen.width - PANEL_W) / 2;
         int top = (screen.height - PANEL_H) / 2;
         double scale = minecraft.getWindow().getGuiScale();
-        GLFW.glfwSetCursorPos(minecraft.getWindow().getWindow(),
-                (left + x) * scale, (top + y) * scale);
-        LibResearch.LOGGER.info("UiTest: наведение на {}x{}", x, y);
+        long window = minecraft.getWindow().getWindow();
+        GLFW.glfwFocusWindow(window);
+        GLFW.glfwSetCursorPos(window, (left + x) * scale, (top + y) * scale);
+        LibResearch.LOGGER.info("UiTest: наведение на {}x{}, курсор игры = {}x{}", x, y,
+                (int) minecraft.mouseHandler.xpos(), (int) minecraft.mouseHandler.ypos());
     }
 
     private static void shot(Minecraft minecraft, String name) {
