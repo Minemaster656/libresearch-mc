@@ -61,7 +61,12 @@ public final class TableCommands {
 
         source.sendSuccess(() -> Component.literal("Стол готов: " + pos.toShortString()
                 + " (тип " + table.getTableType() + ")"), false);
-        openMenu(player, table);
+
+        // Меню открываем через два тика: клиент должен успеть получить BlockEntity,
+        // иначе экран откроется с пустым (старым) состоянием.
+        ServerPlayer viewer = player;
+        player.server.tell(new net.minecraft.server.TickTask(
+                player.server.getTickCount() + 2, () -> openMenu(viewer, table)));
         return 1;
     }
 

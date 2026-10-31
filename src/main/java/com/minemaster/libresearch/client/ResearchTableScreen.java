@@ -21,6 +21,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
@@ -68,7 +69,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         this.imageWidth = W;
         this.imageHeight = H;
         this.titleLabelX = 8;
-        this.titleLabelY = 6;
+        this.titleLabelY = 10000;
         this.inventoryLabelY = 10000;
     }
 
@@ -153,6 +154,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         graphics.renderOutline(0, 0, W, H, BORDER);
         graphics.fill(0, 0, W, 40, PANEL);
         graphics.fill(0, 40, W, 41, BORDER);
+        graphics.drawString(font, this.title, 8, 7, 0xFFFFE0A0, false);
 
         drawSlotFrames(graphics);
 
@@ -223,15 +225,13 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         }
 
         // Подсказка, если ресурсы лежат в инвентаре, а не в слотах стола.
-        if (table != null && minecraft != null && minecraft.player != null) {
-            int paperInSlot = table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_PAPER).getCount();
+        if (minecraft != null && minecraft.player != null) {
             boolean paperInInv = minecraft.player.getInventory().contains(new ItemStack(net.minecraft.world.item.Items.PAPER));
-            boolean inkInSlot = !table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_INKWELL).isEmpty();
             int hintY = 164;
-            if (paperInSlot < 1 && paperInInv) {
+            if (paperInSlots() < 1 && paperInInv) {
                 graphics.drawString(font, "Бумага есть в инвентаре —", LEFT, hintY, GOLD, false);
                 graphics.drawString(font, "положите её в правый слот стола.", LEFT, hintY + 10, GOLD, false);
-            } else if (!inkInSlot && minecraft.player.getInventory().contains(new ItemStack(com.minemaster.libresearch.registry.ModItems.INKWELL.get()))) {
+            } else if (inkInSlots().isEmpty() && minecraft.player.getInventory().contains(new ItemStack(com.minemaster.libresearch.registry.ModItems.INKWELL.get()))) {
                 graphics.drawString(font, "Чернильница есть в инвентаре —", LEFT, hintY, GOLD, false);
                 graphics.drawString(font, "положите её в левый слот стола.", LEFT, hintY + 10, GOLD, false);
             }
@@ -248,24 +248,41 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         graphics.drawString(font, "Вдохновение: " + baseInspiration() + " − бонусы.", textX, 146, DIM, false);
     }
 
+    /**
+     * Слоты стола читаем из меню, а не из BlockEntity: клиентский BlockEntity может
+     * не знать о содержимом (игрок положил предмет после открытия экрана), а слоты
+     * меню синхронизируются сервером всегда.
+     */
+    private ItemStack tableSlot(int slot) {
+        if (slot < 0 || slot >= menu.slots.size()) {
+            return ItemStack.EMPTY;
+        }
+        return menu.getSlot(slot).getItem();
+    }
+
+    private int paperInSlots() {
+        return tableSlot(ResearchTableBlockEntity.SLOT_PAPER).getCount();
+    }
+
+    private ItemStack inkInSlots() {
+        return tableSlot(ResearchTableBlockEntity.SLOT_INKWELL);
+    }
+
     private boolean canStart(TheoryState theory) {
-        ResearchTableBlockEntity table = menu.table();
-        if (table == null || theory.hasPendingRewards()) {
+        if (theory.hasPendingRewards()) {
             return false;
         }
-        int paper = table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_PAPER).getCount();
-        ItemStack ink = table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_INKWELL);
+        ItemStack ink = inkInSlots();
         boolean hasInk = ink.getItem() instanceof com.minemaster.libresearch.item.InkwellItem
                 && com.minemaster.libresearch.item.InkwellItem.data(ink).charges() > 0;
-        return paper > 0 && hasInk && baseInspiration() - selectedCost() >= 1
+        return paperInSlots() > 0 && hasInk && baseInspiration() - selectedCost() >= 1
                 && !tableType().disciplines().isEmpty();
     }
 
     private List<Component> startBlocker() {
-        ResearchTableBlockEntity table = menu.table();
         TheoryState theory = theory();
         List<Component> lines = new ArrayList<>();
-        if (table == null || theory == null) {
+        if (theory == null) {
             return lines;
         }
         if (theory.hasPendingRewards()) {
@@ -276,11 +293,10 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
             lines.add(Component.literal("У стола нет дисциплин").withStyle(ChatFormatting.RED));
             return lines;
         }
-        int paper = table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_PAPER).getCount();
-        if (paper < 1) {
+        if (paperInSlots() < 1) {
             lines.add(Component.literal("Нужен лист бумаги").withStyle(ChatFormatting.RED));
         }
-        ItemStack ink = table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_INKWELL);
+        ItemStack ink = inkInSlots();
         boolean hasInk = ink.getItem() instanceof com.minemaster.libresearch.item.InkwellItem
                 && com.minemaster.libresearch.item.InkwellItem.data(ink).charges() > 0;
         if (!hasInk) {
@@ -322,7 +338,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                             TheoryState theory, int mx, int my) {
         drawLamps(graphics, LEFT, 46, theory.inspiration(), theory.startInspiration());
 
-        int paper = table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_PAPER).getCount();
+        int paper = paperInSlots();
         boolean canDraw = theory.hand().isEmpty() && theory.inspiration() > 0 && paper > 0;
         String drawLabel = theory.hand().isEmpty()
                 ? "Добор — 1 бумага (" + paper + ")" : "Сначала выберите карту";
@@ -374,21 +390,13 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
     }
 
     private int inkCharges() {
-        ResearchTableBlockEntity table = menu.table();
-        if (table == null) {
-            return 0;
-        }
-        ItemStack stack = table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_INKWELL);
+        ItemStack stack = inkInSlots();
         return stack.getItem() instanceof com.minemaster.libresearch.item.InkwellItem
                 ? com.minemaster.libresearch.item.InkwellItem.data(stack).charges() : 0;
     }
 
     private int inkCapacity() {
-        ResearchTableBlockEntity table = menu.table();
-        if (table == null) {
-            return 100;
-        }
-        ItemStack stack = table.getInventory().getStackInSlot(ResearchTableBlockEntity.SLOT_INKWELL);
+        ItemStack stack = inkInSlots();
         return com.minemaster.libresearch.item.InkwellDefinitions.INSTANCE.capacityOf(stack.getItem());
     }
 
@@ -497,7 +505,9 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
             if (claimable > 0) {
                 graphics.renderItemDecorations(font, stack, x + 2, y + 2);
             }
-            graphics.drawString(font, discipline.display() + " — " + claimable + " очк.",
+            graphics.drawString(font, claimable > 0
+                            ? discipline.display() + " — " + claimable + " очк."
+                            : discipline.display() + " — меньше очка (" + reward + "%)",
                     x + 22, y + 6, claimable > 0 ? TEXT : DIM, false);
 
             if (in(x, y, 182, 20, mx, my)) {
@@ -575,20 +585,38 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) {
-            return true;
+        // AbstractContainerScreen.mouseClicked() возвращает true всегда, поэтому
+        // вызывать его первым нельзя — иначе наши кнопки никогда не сработают.
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && minecraft != null && minecraft.player != null
+                && !overSlot(mouseX, mouseY)) {
+            TheoryState theory = theory();
+            if (theory != null) {
+                int mx = (int) mouseX - leftPos;
+                int my = (int) mouseY - topPos;
+                if (handlePanelClick(mx, my, theory, phase(theory))) {
+                    return true;
+                }
+            }
         }
-        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT || minecraft == null || minecraft.player == null) {
-            return false;
-        }
-        TheoryState theory = theory();
-        if (theory == null) {
-            return false;
-        }
-        int mx = (int) mouseX - leftPos;
-        int my = (int) mouseY - topPos;
-        Phase phase = phase(theory);
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
 
+    private boolean overSlot(double mouseX, double mouseY) {
+        for (Slot slot : menu.slots) {
+            if (!slot.isActive()) {
+                continue;
+            }
+            double x = leftPos + slot.x;
+            double y = topPos + slot.y;
+            if (mouseX >= x - 1 && mouseX < x + 17 && mouseY >= y - 1 && mouseY < y + 17) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Обработка кликов по нашим кнопкам/ячейкам. Возвращает true, если клик наш. */
+    private boolean handlePanelClick(int mx, int my, TheoryState theory, Phase phase) {
         if (phase == Phase.SETUP) {
             List<ResourceLocation> bonuses = tableType().bonusBlocks();
             int limit = Math.min(bonuses.size(), 18);
@@ -602,20 +630,19 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                 }
             }
             if (in(LEFT, 140, LEFT_W, 18, mx, my)) {
-                if (canStart(theory)) {
-                    send(ModNetwork.Action.START, 0, "");
-                } else {
+                // Клиентская проверка только для подсказки. Решение — за сервером:
+                // он ответит причиной отказа в actionbar, если начать нельзя.
+                if (!canStart(theory)) {
                     for (Component line : startBlocker()) {
                         minecraft.player.displayClientMessage(line, true);
                     }
                 }
+                send(ModNetwork.Action.START, 0, "");
                 return true;
             }
         } else if (phase == Phase.PLAY) {
             if (in(LEFT, 58, LEFT_W, 26, mx, my)) {
-                if (theory.hand().isEmpty() && theory.inspiration() > 0) {
-                    send(ModNetwork.Action.DRAW, 0, "");
-                }
+                send(ModNetwork.Action.DRAW, 0, "");
                 return true;
             }
             for (int index = 0; index < theory.hand().size(); index++) {
@@ -626,9 +653,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                 }
             }
             if (in(RIGHT, 152, 86, 18, mx, my)) {
-                if (theory.inspiration() <= 0) {
-                    send(ModNetwork.Action.FINISH, 0, "");
-                }
+                send(ModNetwork.Action.FINISH, 0, "");
                 return true;
             }
             if (in(RIGHT + 92, 152, 94, 18, mx, my)) {
@@ -636,7 +661,6 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                 return true;
             }
         } else {
-            Knowledge knowledge = PlayerKnowledge.get(minecraft.player);
             for (TableType.Discipline discipline : tableType().disciplines()) {
                 long reward = theory.reward(discipline.id());
                 if (reward <= 0) {
@@ -644,9 +668,9 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                 }
                 int y = 46 + rewardRow(theory, discipline.id()) * 22;
                 if (in(RIGHT, y, 182, 20, mx, my)) {
-                    if (KnowledgeMath.claimablePoints(reward, knowledge.centi(discipline.id())) > 0) {
-                        send(ModNetwork.Action.CLAIM, 0, discipline.id());
-                    }
+                    // Сколько очков доступно, решает сервер (у клиента может быть
+                    // устаревшая копия знаний). Клиент только отправляет запрос.
+                    send(ModNetwork.Action.CLAIM, 0, discipline.id());
                     return true;
                 }
             }
@@ -673,6 +697,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
     }
 
     private void send(ModNetwork.Action action, int index, String arg) {
+        com.minemaster.libresearch.LibResearch.LOGGER.info("UI send {} {} (стол {})", action, arg, menu.pos());
         PacketDistributor.sendToServer(new ModNetwork.TableActionPayload(menu.pos(), action, index, arg));
     }
 
@@ -680,6 +705,9 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         tooltip = List.of();
         super.render(graphics, mouseX, mouseY, partialTick);
+        // В 1.21.1 AbstractContainerScreen больше не рисует тултип слота сам —
+        // это обязанность конкретного экрана.
+        this.renderTooltip(graphics, mouseX, mouseY);
         if (!tooltip.isEmpty() && hoveredSlot == null) {
             graphics.renderComponentTooltip(font, tooltip, mouseX, mouseY);
         }
