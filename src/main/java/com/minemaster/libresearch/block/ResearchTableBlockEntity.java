@@ -3,6 +3,7 @@ package com.minemaster.libresearch.block;
 import com.minemaster.libresearch.LibResearch;
 import com.minemaster.libresearch.registry.ModBlockEntities;
 import com.minemaster.libresearch.registry.ModItems;
+import com.minemaster.libresearch.item.Papers;
 import com.minemaster.libresearch.theory.TheoryState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -30,7 +31,7 @@ public class ResearchTableBlockEntity extends BlockEntity {
         public boolean isItemValid(int slot, ItemStack stack) {
             return switch (slot) {
                 case SLOT_INKWELL -> stack.is(ModItems.INKWELL.get());
-                case SLOT_PAPER -> stack.is(net.minecraft.world.item.Items.PAPER);
+                case SLOT_PAPER -> stack.is(Papers.INSTANCE.itemForType(tableType));
                 default -> false;
             };
         }

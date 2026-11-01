@@ -64,19 +64,19 @@ public final class TheoryCommand {
         CommandSourceStack source = command.getSource();
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.literal("Команда работает только для игрока."));
+            source.sendFailure(Component.translatable("libresearch.cmd.player_only"));
             return 0;
         }
 
         Optional<ResearchTableBlockEntity> table = Tables.lookedAtOrNearest(player, Tables.REACH);
         if (table.isEmpty()) {
-            source.sendFailure(Component.literal("Посмотрите на стол исследований (до 8 блоков)."));
+            source.sendFailure(Component.translatable("libresearch.cmd.look_at_table"));
             return 0;
         }
 
         Optional<TableContext> context = TableContext.of(player, table.get());
         if (context.isEmpty()) {
-            source.sendFailure(Component.literal("Неизвестный тип стола: " + table.get().getTableType()));
+            source.sendFailure(Component.translatable("libresearch.cmd.unknown_table", table.get().getTableType()));
             return 0;
         }
 
@@ -93,20 +93,26 @@ public final class TheoryCommand {
     public static int knowledge(CommandContext<CommandSourceStack> command) {
         ServerPlayer player = command.getSource().getPlayer();
         if (player == null) {
-            command.getSource().sendFailure(Component.literal("Команда работает только для игрока."));
+            command.getSource().sendFailure(Component.translatable("libresearch.cmd.player_only"));
             return 0;
         }
         Knowledge knowledge = PlayerKnowledge.get(player);
         if (knowledge.centi().isEmpty()) {
-            command.getSource().sendSuccess(() -> Component.literal("Знаний пока нет."), false);
+            command.getSource().sendSuccess(() -> Component.translatable("libresearch.cmd.no_knowledge"), false);
             return 1;
         }
-        String text = String.join(", ", knowledge.centi().entrySet().stream()
-                .sorted((a, b) -> a.getKey().compareTo(b.getKey()))
-                .map(entry -> entry.getKey() + " " + entry.getValue() + " санти ("
-                        + knowledge.points(entry.getKey()) + " очк.)")
-                .toList());
-        command.getSource().sendSuccess(() -> Component.literal("Знания: " + text), false);
+        var text = Component.empty();
+        boolean first = true;
+        for (var entry : knowledge.centi().entrySet().stream()
+                .sorted((a, b) -> a.getKey().compareTo(b.getKey())).toList()) {
+            if (!first) {
+                text.append(Component.literal(", "));
+            }
+            text.append(Component.translatable("libresearch.cmd.knowledge_entry",
+                    entry.getKey(), entry.getValue(), knowledge.points(entry.getKey())));
+            first = false;
+        }
+        command.getSource().sendSuccess(() -> Component.translatable("libresearch.cmd.knowledge", text), false);
         return 1;
     }
 }

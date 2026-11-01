@@ -2,6 +2,7 @@ package com.minemaster.libresearch.data;
 
 import com.minemaster.libresearch.LibResearch;
 import com.minemaster.libresearch.block.ResearchTableBlockEntity;
+import com.minemaster.libresearch.item.Papers;
 import com.minemaster.libresearch.menu.ResearchTableMenu;
 import com.minemaster.libresearch.registry.ModBlocks;
 import com.minemaster.libresearch.registry.ModItems;
@@ -14,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
 /**
@@ -56,7 +56,7 @@ public final class TableCommands {
         table.getInventory().setStackInSlot(ResearchTableBlockEntity.SLOT_INKWELL,
                 new ItemStack(ModItems.INKWELL.get()));
         table.getInventory().setStackInSlot(ResearchTableBlockEntity.SLOT_PAPER,
-                new ItemStack(Items.PAPER, 32));
+                new ItemStack(Papers.INSTANCE.itemForType(table.getTableType()), 32));
         table.markUpdated();
 
         source.sendSuccess(() -> Component.literal("Стол готов: " + pos.toShortString()

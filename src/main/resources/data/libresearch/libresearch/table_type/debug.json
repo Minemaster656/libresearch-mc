@@ -1,4 +1,5 @@
 {
+  "paper": "libresearch:paper",
   "display": "Debug Table",
   "disciplines": [
     { "id": "red", "display": "Red", "color": "#FF0000", "icon": "minecraft:red_dye", "payout": "minecraft:red_dye", "count_per_point": 1 },

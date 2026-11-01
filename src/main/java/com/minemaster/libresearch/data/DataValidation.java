@@ -11,6 +11,7 @@ import com.minemaster.libresearch.content.table.TableType;
 import com.minemaster.libresearch.content.table.TableTypes;
 import com.minemaster.libresearch.item.InkwellDefinitions;
 import com.minemaster.libresearch.item.InkwellItem;
+import com.minemaster.libresearch.item.Papers;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -45,6 +46,7 @@ public final class DataValidation {
         validateBonuses(problems);
         validateCards(problems, disciplines);
         validateInkwells(problems);
+        validatePapers(problems);
 
         return problems;
     }
@@ -83,6 +85,9 @@ public final class DataValidation {
                 if (!TableBonuses.INSTANCE.contains(bonus)) {
                     problems.add(new Problem(source, "неизвестный бонусный блок: " + bonus));
                 }
+            }
+            if (Papers.INSTANCE.get(type.paper()).isEmpty()) {
+                problems.add(new Problem(source, "неизвестное определение бумаги: " + type.paper()));
             }
         });
     }
@@ -241,6 +246,18 @@ public final class DataValidation {
             }
             if (definition.chargesPerDraw() <= 0) {
                 problems.add(new Problem(source, "charges_per_draw ≤ 0"));
+            }
+        });
+    }
+
+    private static void validatePapers(List<Problem> problems) {
+        Papers.INSTANCE.all().forEach((id, definition) -> {
+            String source = "paper " + id;
+            if (!BuiltInRegistries.ITEM.containsKey(definition.item())) {
+                problems.add(new Problem(source, "неизвестный предмет: " + definition.item()));
+            }
+            if (definition.perDraw() < 1) {
+                problems.add(new Problem(source, "per_draw < 1"));
             }
         });
     }

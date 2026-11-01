@@ -10,20 +10,27 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Определение типа стола: какие дисциплины он знает и какие бонусные блоки
- * рядом с ним распознаёт.
+ * Определение типа стола: какие дисциплины он знает, какие бонусные блоки
+ * рядом с ним распознаёт и какое определение бумаги использует.
  *
  * <p>Файл: {@code data/<namespace>/libresearch/table_type/<id>.json}.
  * Типов столов может быть сколько угодно; блок лишь ссылается на id типа.</p>
  */
-public record TableType(String display, List<Discipline> disciplines, List<ResourceLocation> bonusBlocks) {
+public record TableType(String display, List<Discipline> disciplines, List<ResourceLocation> bonusBlocks,
+                        ResourceLocation paper) {
+    /** Определение бумаги по умолчанию — {@code libresearch:paper} (обычная бумага). */
+    public static final ResourceLocation DEFAULT_PAPER =
+            ResourceLocation.fromNamespaceAndPath("libresearch", "paper");
+
     public static final Codec<TableType> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.fieldOf("display").forGetter(TableType::display),
             Discipline.CODEC.listOf().optionalFieldOf("disciplines", List.of()).forGetter(TableType::disciplines),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("bonus_blocks", List.of()).forGetter(TableType::bonusBlocks)
+            ResourceLocation.CODEC.listOf().optionalFieldOf("bonus_blocks", List.of()).forGetter(TableType::bonusBlocks),
+            ResourceLocation.CODEC.optionalFieldOf("paper", DEFAULT_PAPER).forGetter(TableType::paper)
     ).apply(instance, TableType::new));
 
-    public static final TableType EMPTY = new TableType("libresearch.table.empty", List.of(), List.of());
+    public static final TableType EMPTY = new TableType("libresearch.table.empty", List.of(), List.of(),
+            DEFAULT_PAPER);
 
     /** Уникальные id дисциплин — для проверки ссылок из карт. */
     public Set<String> disciplineIds() {

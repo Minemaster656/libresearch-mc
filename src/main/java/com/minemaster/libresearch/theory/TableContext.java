@@ -5,6 +5,8 @@ import com.minemaster.libresearch.content.table.TableType;
 import com.minemaster.libresearch.content.table.TableTypes;
 import com.minemaster.libresearch.item.InkwellData;
 import com.minemaster.libresearch.item.InkwellItem;
+import com.minemaster.libresearch.item.PaperDefinition;
+import com.minemaster.libresearch.item.Papers;
 import com.minemaster.libresearch.registry.ModDataComponents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
@@ -61,6 +63,16 @@ public record TableContext(ServerPlayer player, ResearchTableBlockEntity table,
         stack.set(ModDataComponents.INKWELL.get(), data.withCharges(data.charges() - amount));
         table.getInventory().setStackInSlot(ResearchTableBlockEntity.SLOT_INKWELL, stack);
         return true;
+    }
+
+    /** Определение бумаги этого стола (см. {@code libresearch/paper/<id>.json}). */
+    public PaperDefinition paperDefinition() {
+        return Papers.INSTANCE.forType(table.getTableType());
+    }
+
+    /** Сколько бумаги уходит на один добор руки. */
+    public int paperPerDraw() {
+        return Math.max(1, paperDefinition().perDraw());
     }
 
     public int paperCount() {

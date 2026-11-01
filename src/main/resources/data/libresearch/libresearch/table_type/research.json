@@ -1,4 +1,5 @@
 {
+  "paper": "libresearch:paper",
   "display": "Research Table",
   "disciplines": [
     { "id": "copper", "display": "Copper", "color": "#C87F4A", "icon": "minecraft:copper_ingot", "payout": "minecraft:copper_ingot", "count_per_point": 2 },

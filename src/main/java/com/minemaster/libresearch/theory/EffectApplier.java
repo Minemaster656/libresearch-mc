@@ -4,6 +4,7 @@ import com.minemaster.libresearch.content.card.Card;
 import com.minemaster.libresearch.content.card.CardEffect;
 import com.minemaster.libresearch.content.table.TableType;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -15,12 +16,15 @@ import java.util.List;
  * Применение эффектов уже разыгранной карты. Дополнительный расход бумаги/чернил
  * ({@code paper}, {@code ink_charges}) здесь пропускается: он проверяется и
  * списывается движком до применения эффектов, вместе с обычной платой за розыгрыш.
+ *
+ * <p>Лог возвращается компонентами с ключами {@code libresearch.log.*}, чтобы
+ * сообщение о розыгрыше переводилось на клиенте.</p>
  */
 public final class EffectApplier {
     private EffectApplier() {
     }
 
-    public static void apply(Card card, DrawnCard drawn, TableContext ctx, List<String> log) {
+    public static void apply(Card card, DrawnCard drawn, TableContext ctx, List<Component> log) {
         TheoryState theory = ctx.theory();
 
         for (int index = 0; index < card.effects().size(); index++) {
@@ -32,10 +36,10 @@ public final class EffectApplier {
                 case CardEffect.Progress progress -> {
                     if (target.equals("all_equalize")) {
                         equalize(theory, ctx.type());
-                        log.add("уравнивание дисциплин");
+                        log.add(Component.translatable("libresearch.log.equalize"));
                     } else if (!target.isBlank()) {
                         theory.addProgress(target, roll);
-                        log.add(target + " +" + roll + "%");
+                        log.add(Component.translatable("libresearch.log.progress", target, roll));
                     }
                 }
                 case CardEffect.ProgressDrain drain -> {
@@ -43,31 +47,32 @@ public final class EffectApplier {
                             ? ctx.type().disciplines().stream().map(TableType.Discipline::id).toList()
                             : drain.from();
                     int drained = drainRoundRobin(theory, from, roll);
-                    log.add("прогресс −" + drained + "%");
+                    log.add(Component.translatable("libresearch.log.drain", drained));
                 }
                 case CardEffect.Inspiration inspiration -> {
                     theory.setInspiration(theory.inspiration() + roll);
-                    log.add("вдохновение " + (roll >= 0 ? "+" : "") + roll);
+                    log.add(Component.translatable("libresearch.log.inspiration",
+                            (roll >= 0 ? "+" : "") + roll));
                 }
                 case CardEffect.BonusDraws bonusDraws -> {
                     theory.addBonusDraws(roll);
-                    log.add("бонусных доборов +" + roll);
+                    log.add(Component.translatable("libresearch.log.bonus_draws", roll));
                 }
                 case CardEffect.FullValueSlots slots -> {
                     theory.addFullValueSlots(roll);
-                    log.add("полный зачёт ещё для " + roll + " дисциплин");
+                    log.add(Component.translatable("libresearch.log.full_value", roll));
                 }
                 case CardEffect.BlockDiscipline ignored -> {
                     if (!target.isBlank()) {
                         theory.block(target);
-                        log.add("заблокирована дисциплина: " + target);
+                        log.add(Component.translatable("libresearch.log.blocked", target));
                     }
                 }
                 case CardEffect.GiveItem giveItem -> giveItem(ctx.player(), giveItem, roll, log);
                 case CardEffect.ConsumeXp xp -> {
                     int levels = xp.all() ? ctx.player().experienceLevel : roll;
                     ctx.player().giveExperienceLevels(-Math.max(0, levels));
-                    log.add("опыт −" + levels);
+                    log.add(Component.translatable("libresearch.log.xp", levels));
                 }
                 case CardEffect.Paper ignored -> {
                     // Расход учтён движком до применения эффектов.
@@ -119,7 +124,7 @@ public final class EffectApplier {
         return drained;
     }
 
-    private static void giveItem(ServerPlayer player, CardEffect.GiveItem effect, int count, List<String> log) {
+    private static void giveItem(ServerPlayer player, CardEffect.GiveItem effect, int count, List<Component> log) {
         if (count <= 0) {
             return;
         }
@@ -135,11 +140,12 @@ public final class EffectApplier {
             }
             remaining -= size;
         }
-        log.add("получено: " + count + " × " + new ItemStack(item).getHoverName().getString());
+        log.add(Component.translatable("libresearch.log.give_item",
+                count, new ItemStack(item).getHoverName()));
     }
 
     /** Пустой список для лога — удобно, когда сообщение не нужно. */
-    public static List<String> newLog() {
+    public static List<Component> newLog() {
         return new ArrayList<>();
     }
 }

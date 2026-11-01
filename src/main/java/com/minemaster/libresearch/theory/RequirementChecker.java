@@ -3,6 +3,7 @@ package com.minemaster.libresearch.theory;
 import com.minemaster.libresearch.content.card.CardRequirement;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
@@ -16,17 +17,18 @@ import java.util.function.Predicate;
 /**
  * Проверка и списание требований карты. Требования «мягкие»: карту можно
  * предложить, но нельзя разыграть, пока они не выполнены; причина возвращается
- * текстом, чтобы GUI её показал.
+ * компонентом, чтобы GUI её показал на языке клиента.
  */
 public final class RequirementChecker {
     private RequirementChecker() {
     }
 
-    public record Result(boolean ok, String reason) {
-        public static final Result OK = new Result(true, "");
+    public record Result(boolean ok, Component reason) {
+        public static final Result OK = new Result(true, Component.empty());
 
-        public static Result fail(String reason) {
-            return new Result(false, reason);
+        /** Отказ: ключ перевода {@code libresearch.reason.*} и аргументы. */
+        public static Result fail(String key, Object... args) {
+            return new Result(false, Component.translatable(key, args));
         }
     }
 
@@ -39,38 +41,39 @@ public final class RequirementChecker {
                     Predicate<ItemStack> matcher = matcher(item);
                     int available = count(player, matcher);
                     if (available < item.count()) {
-                        return Result.fail("Нужно " + item.count() + " × " + describe(item) + " (есть " + available + ")");
+                        return Result.fail("libresearch.reason.req_item", item.count(), describe(item), available);
                     }
                 }
                 case CardRequirement.AnyItem anyItem -> {
                     Predicate<ItemStack> matcher = tagMatcher(anyItem.tag());
                     int available = count(player, matcher);
                     if (available < anyItem.count()) {
-                        return Result.fail("Нужно " + anyItem.count() + " × любой предмет из #" + anyItem.tag()
-                                + " (есть " + available + ")");
+                        return Result.fail("libresearch.reason.req_tag", anyItem.count(),
+                                anyItem.tag().toString(), available);
                     }
                 }
                 case CardRequirement.XpLevels xp -> {
                     if (player.experienceLevel < xp.min()) {
-                        return Result.fail("Нужно уровней опыта: " + xp.min() + " (есть " + player.experienceLevel + ")");
+                        return Result.fail("libresearch.reason.req_xp", xp.min(), player.experienceLevel);
                     }
                 }
                 case CardRequirement.TableResources resources -> {
                     if (ctx.paperCount() < resources.paper()) {
-                        return Result.fail("Нужно бумаги: " + resources.paper() + " (в слоте " + ctx.paperCount() + ")");
+                        return Result.fail("libresearch.reason.req_paper", resources.paper(), ctx.paperCount());
                     }
                     if (ctx.inkCharges() < resources.inkCharges()) {
-                        return Result.fail("Нужно чернил: " + resources.inkCharges() + " (в чернильнице " + ctx.inkCharges() + ")");
+                        return Result.fail("libresearch.reason.req_ink",
+                                resources.inkCharges(), ctx.inkCharges());
                     }
                 }
                 case CardRequirement.Progress progress -> {
-                    String reason = checkProgress(progress, cardDiscipline, ctx);
+                    Result reason = checkProgress(progress, cardDiscipline, ctx);
                     if (reason != null) {
-                        return Result.fail(reason);
+                        return reason;
                     }
                 }
                 case CardRequirement.Never ignored -> {
-                    return Result.fail("Карта отключена (never)");
+                    return Result.fail("libresearch.reason.card_disabled");
                 }
             }
         }
@@ -96,7 +99,7 @@ public final class RequirementChecker {
     }
 
     @Nullable
-    private static String checkProgress(CardRequirement.Progress progress, @Nullable String cardDiscipline,
+    private static Result checkProgress(CardRequirement.Progress progress, @Nullable String cardDiscipline,
                                         TableContext ctx) {
         TheoryState theory = ctx.theory();
 
@@ -105,7 +108,7 @@ public final class RequirementChecker {
                     .filter(discipline -> theory.progress(discipline.id()) > 0)
                     .count();
             if (counted < progress.minDisciplines()) {
-                return "Нужно дисциплин с прогрессом: " + progress.minDisciplines() + " (есть " + counted + ")";
+                return Result.fail("libresearch.reason.req_disciplines", progress.minDisciplines(), counted);
             }
         }
 
@@ -114,7 +117,7 @@ public final class RequirementChecker {
                     .mapToInt(discipline -> theory.progress(discipline.id()))
                     .sum();
             if (total < progress.minTotal()) {
-                return "Нужно суммарного прогресса: " + progress.minTotal() + "% (есть " + total + "%)";
+                return Result.fail("libresearch.reason.req_total", progress.minTotal(), total);
             }
         }
 
@@ -128,7 +131,7 @@ public final class RequirementChecker {
             }
             int current = theory.progress(id);
             if (current < progress.minPercent()) {
-                return "Нужно прогресса в " + id + ": " + progress.minPercent() + "% (есть " + current + "%)";
+                return Result.fail("libresearch.reason.req_percent", id, progress.minPercent(), current);
             }
         }
         return null;
@@ -150,11 +153,12 @@ public final class RequirementChecker {
         return stack -> stack.is(key);
     }
 
-    private static String describe(CardRequirement.Item item) {
+    private static Component describe(CardRequirement.Item item) {
         if (item.item().isPresent()) {
-            return new ItemStack(BuiltInRegistries.ITEM.get(item.item().get())).getHoverName().getString();
+            return new ItemStack(BuiltInRegistries.ITEM.get(item.item().get())).getHoverName();
         }
-        return item.tag().map(tag -> "#" + tag).orElse("предмет");
+        return item.tag().map(tag -> (Component) Component.literal("#" + tag))
+                .orElse(Component.translatable("libresearch.reason.some_item"));
     }
 
     private static int count(ServerPlayer player, Predicate<ItemStack> matcher) {

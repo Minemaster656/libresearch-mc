@@ -1,5 +1,6 @@
 package com.minemaster.libresearch.theory;
 
+import com.minemaster.libresearch.content.ContentText;
 import com.minemaster.libresearch.content.card.Card;
 import com.minemaster.libresearch.content.card.Cards;
 import com.minemaster.libresearch.content.table.TableType;
@@ -34,6 +35,7 @@ public final class TheoryEngine {
     }
 
     public record Result(boolean ok, Component message) {
+        /** Готовый текст (отладочные команды, статус) — без перевода. */
         public static Result ok(String text) {
             return new Result(true, Component.literal(text).withStyle(ChatFormatting.GREEN));
         }
@@ -41,24 +43,43 @@ public final class TheoryEngine {
         public static Result fail(String text) {
             return new Result(false, Component.literal(text).withStyle(ChatFormatting.RED));
         }
+
+        public static Result ok(Component message) {
+            return new Result(true, message.copy().withStyle(ChatFormatting.GREEN));
+        }
+
+        public static Result fail(Component message) {
+            return new Result(false, message.copy().withStyle(ChatFormatting.RED));
+        }
+
+        /** Успех с ключом перевода {@code libresearch.msg.*}. */
+        public static Result okKey(String key, Object... args) {
+            return ok(Component.translatable(key, args));
+        }
+
+        /** Отказ с ключом перевода {@code libresearch.reason.*}. */
+        public static Result failKey(String key, Object... args) {
+            return fail(Component.translatable(key, args));
+        }
     }
 
     public static Result start(TableContext ctx) {
         TheoryState theory = ctx.theory();
         if (theory.isActive()) {
-            return Result.fail("Теория уже идёт.");
+            return Result.failKey("libresearch.reason.already_active");
         }
         if (theory.hasPendingRewards()) {
-            return Result.fail("Сначала заберите награды: у стола есть целые очки.");
+            return Result.failKey("libresearch.reason.pending_rewards");
         }
         if (ctx.type().disciplines().isEmpty()) {
-            return Result.fail("У этого стола нет ни одной дисциплины.");
+            return Result.failKey("libresearch.reason.no_disciplines");
         }
-        if (ctx.paperCount() < 1) {
-            return Result.fail("Нужен лист бумаги в слоте.");
+        int paperCost = ctx.paperPerDraw();
+        if (ctx.paperCount() < paperCost) {
+            return Result.failKey("libresearch.reason.not_enough_paper", paperCost, ctx.paperCount());
         }
         if (ctx.inkCharges() < 1) {
-            return Result.fail("Нужна чернильница с чернилами в слоте.");
+            return Result.failKey("libresearch.reason.no_ink");
         }
 
         int base = KnowledgeMath.startInspiration(0, 0);
@@ -88,53 +109,56 @@ public final class TheoryEngine {
 
         int inspiration = base - cost;
         if (inspiration < 1) {
-            return Result.fail("Слишком много бонусов: нужно оставить хотя бы 1 вдохновение.");
+            return Result.failKey("libresearch.reason.too_many_bonuses");
         }
 
         theory.start(inspiration, ctx.type().disciplines().size());
         theory.setBonusDeck(deck);
         ctx.markUpdated();
-        return Result.ok("Теория начата. Вдохновение " + inspiration + "/" + base
-                + (deck.isEmpty() ? "." : ", бонусных карт в колоде: " + deck.size() + "."));
+        return deck.isEmpty()
+                ? Result.okKey("libresearch.msg.started", inspiration, base)
+                : Result.okKey("libresearch.msg.started_with_bonus", inspiration, base, deck.size());
     }
 
     /** Выбор/снятие бонусного блока до старта теории. */
     public static Result toggleBonus(TableContext ctx, String bonusId) {
         TheoryState theory = ctx.theory();
         if (theory.isActive()) {
-            return Result.fail("Нельзя менять бонусы, пока идёт теория.");
+            return Result.failKey("libresearch.reason.bonus_locked");
         }
         ResourceLocation id = ResourceLocation.tryParse(bonusId);
         if (id == null || !ctx.type().bonusBlocks().contains(id)) {
-            return Result.fail("Этот стол не знает бонус " + bonusId + ".");
+            return Result.failKey("libresearch.reason.unknown_bonus", bonusId);
         }
         if (com.minemaster.libresearch.content.bonus.TableBonuses.INSTANCE.get(id).isEmpty()) {
-            return Result.fail("Бонус " + bonusId + " не загружен.");
+            return Result.failKey("libresearch.reason.bonus_not_loaded", bonusId);
         }
         java.util.Set<ResourceLocation> detected = BonusScanner.scan(ctx.player().serverLevel(),
                 ctx.table().getBlockPos(), ctx.type());
         if (!detected.contains(id)) {
-            return Result.fail("Рядом со столом нет этого блока.");
+            return Result.failKey("libresearch.reason.bonus_missing_block");
         }
 
         boolean selected = theory.toggleBonus(bonusId);
         ctx.markUpdated();
-        return Result.ok((selected ? "Выбран бонус " : "Снят бонус ") + bonusId + ".");
+        return Result.okKey(selected ? "libresearch.msg.bonus_selected" : "libresearch.msg.bonus_unselected",
+                bonusId);
     }
 
     public static Result draw(TableContext ctx) {
         TheoryState theory = ctx.theory();
         if (!theory.isActive()) {
-            return Result.fail("Сначала начните теорию.");
+            return Result.failKey("libresearch.reason.theory_not_started");
         }
         if (theory.inspiration() <= 0) {
-            return Result.fail("Вдохновение на нуле — завершите теорию.");
+            return Result.failKey("libresearch.reason.inspiration_zero");
         }
         if (!theory.hand().isEmpty()) {
-            return Result.fail("Сначала разыграйте карту из руки.");
+            return Result.failKey("libresearch.reason.play_card_first");
         }
-        if (ctx.paperCount() < 1) {
-            return Result.fail("Нужен лист бумаги в слоте.");
+        int paperCost = ctx.paperPerDraw();
+        if (ctx.paperCount() < paperCost) {
+            return Result.failKey("libresearch.reason.not_enough_paper", paperCost, ctx.paperCount());
         }
 
         int size = HAND_SIZE;
@@ -143,45 +167,53 @@ public final class TheoryEngine {
             theory.addBonusDraws(-1);
         }
 
-        ctx.consumePaper(1);
+        ctx.consumePaper(paperCost);
         List<DrawnCard> hand = drawHand(ctx, size);
         theory.setHand(hand);
         ctx.markUpdated();
 
         if (hand.isEmpty()) {
-            return Result.ok("В руке не осталось доступных карт. Потрачен 1 лист бумаги.");
+            return Result.okKey("libresearch.msg.hand_empty");
         }
-        List<String> names = hand.stream().map(card -> describe(ctx, card)).toList();
-        return Result.ok("В руке: " + String.join(", ", names) + ".");
+        var names = Component.empty();
+        for (int index = 0; index < hand.size(); index++) {
+            if (index > 0) {
+                names.append(Component.literal(", "));
+            }
+            names.append(describe(ctx, hand.get(index)));
+        }
+        return Result.okKey("libresearch.msg.hand", names);
     }
 
     public static Result play(TableContext ctx, int index) {
         TheoryState theory = ctx.theory();
         if (!theory.isActive()) {
-            return Result.fail("Сначала начните теорию.");
+            return Result.failKey("libresearch.reason.theory_not_started");
         }
         if (theory.inspiration() <= 0) {
-            return Result.fail("Вдохновение на нуле — теория завершена, осталось её завершить.");
+            return Result.failKey("libresearch.reason.inspiration_zero_play");
         }
 
         List<DrawnCard> hand = theory.hand();
         if (index < 0 || index >= hand.size()) {
-            return Result.fail("В руке нет карты с номером " + (index + 1) + ".");
+            return Result.failKey("libresearch.reason.no_card_index", index + 1);
         }
         DrawnCard drawn = hand.get(index);
         Optional<Card> optional = Cards.INSTANCE.get(drawn.card());
         if (optional.isEmpty()) {
-            return Result.fail("Карта " + drawn.card() + " больше не существует (датапак изменился).");
+            return Result.failKey("libresearch.reason.card_gone", drawn.card());
         }
         Card card = optional.get();
 
         int inkCost = inkPerPlay(ctx) + CardRoller.extraInk(card);
+        // Розыгрыш карты бумагу не тратит (только чернила); карта может потребовать
+        // доп. бумагу эффектом `paper`.
         int paperCost = CardRoller.extraPaper(card);
         if (ctx.inkCharges() < inkCost) {
-            return Result.fail("Не хватает чернил: нужно " + inkCost + ", в чернильнице " + ctx.inkCharges() + ".");
+            return Result.failKey("libresearch.reason.not_enough_ink", inkCost, ctx.inkCharges());
         }
         if (ctx.paperCount() < paperCost) {
-            return Result.fail("Не хватает бумаги: нужно " + paperCost + ", в слоте " + ctx.paperCount() + ".");
+            return Result.failKey("libresearch.reason.not_enough_paper", paperCost, ctx.paperCount());
         }
 
         RequirementChecker.Result check = RequirementChecker.check(card.requires(), drawn.discipline(), ctx);
@@ -193,27 +225,41 @@ public final class TheoryEngine {
         ctx.drainInk(inkCost);
         ctx.consumePaper(paperCost);
 
-        List<String> log = EffectApplier.newLog();
+        List<Component> log = EffectApplier.newLog();
         EffectApplier.apply(card, drawn, ctx, log);
 
         theory.setInspiration(theory.inspiration() - drawn.cost());
         theory.setHand(List.of());
         ctx.markUpdated();
 
-        String name = card.display().isBlank() ? drawn.card().toString() : card.display();
-        String details = log.isEmpty() ? "" : " (" + String.join(", ", log) + ")";
-        String tail = theory.inspiration() <= 0 ? " Вдохновение на нуле — завершите теорию." : "";
-        return Result.ok("Разыграна карта " + name + details + "." + tail);
+        Component name = ContentText.display(card.display().isBlank()
+                ? drawn.card().toString() : card.display());
+        var message = Component.empty();
+        if (log.isEmpty()) {
+            message.append(Component.translatable("libresearch.msg.card_played", name));
+        } else {
+            var details = Component.empty();
+            for (int entry = 0; entry < log.size(); entry++) {
+                if (entry > 0) {
+                    details.append(Component.literal(", "));
+                }
+                details.append(log.get(entry));
+            }
+            message.append(Component.translatable("libresearch.msg.card_played_details", name, details));
+        }
+        if (theory.inspiration() <= 0) {
+            message.append(Component.translatable("libresearch.msg.inspiration_zero_tail"));
+        }
+        return Result.ok(message);
     }
 
     public static Result finish(TableContext ctx) {
         TheoryState theory = ctx.theory();
         if (!theory.isActive()) {
-            return Result.fail("Теория не идёт.");
+            return Result.failKey("libresearch.reason.theory_not_running");
         }
         if (theory.inspiration() > 0) {
-            return Result.fail("Вдохновение ещё не на нуле (" + theory.inspiration()
-                    + ") — доведите теорию до конца.");
+            return Result.failKey("libresearch.reason.finish_needs_zero", theory.inspiration());
         }
 
         List<KnowledgeMath.Entry> entries = ctx.type().disciplines().stream()
@@ -222,40 +268,46 @@ public final class TheoryEngine {
         List<KnowledgeMath.Conversion> conversions = KnowledgeMath.convert(entries, theory.fullValueSlots());
 
         Knowledge knowledge = PlayerKnowledge.get(ctx.player());
-        List<String> summary = new ArrayList<>();
+        var summary = Component.empty();
+        boolean any = false;
         for (KnowledgeMath.Conversion conversion : conversions) {
             if (conversion.centi() <= 0) {
                 continue;
             }
             knowledge = knowledge.add(conversion.discipline(), conversion.centi());
             theory.addReward(conversion.discipline(), conversion.centi());
-            summary.add(conversion.discipline() + " " + conversion.percent() + "% → "
-                    + conversion.centi() + " санти-очков");
+            if (any) {
+                summary.append(Component.literal("; "));
+            }
+            summary.append(Component.translatable("libresearch.msg.finished_entry",
+                    disciplineName(ctx, conversion.discipline()),
+                    conversion.percent(), conversion.centi()));
+            any = true;
         }
 
         PlayerKnowledge.set(ctx.player(), knowledge);
         theory.clearTheory();
         ctx.markUpdated();
 
-        if (summary.isEmpty()) {
-            return Result.ok("Теория завершена без прогресса: начислять нечего.");
+        if (!any) {
+            return Result.okKey("libresearch.msg.finished_empty");
         }
-        return Result.ok("Теория завершена. " + String.join("; ", summary) + ". Заберите награды.");
+        return Result.okKey("libresearch.msg.finished", summary);
     }
 
     public static Result discard(TableContext ctx) {
         if (!ctx.theory().isActive()) {
-            return Result.fail("Теория не идёт.");
+            return Result.failKey("libresearch.reason.theory_not_running");
         }
         ctx.theory().clearTheory();
         ctx.markUpdated();
-        return Result.ok("Теория сброшена. Прогресс потерян, награды за прошлые теории остались.");
+        return Result.okKey("libresearch.msg.discarded");
     }
 
     public static Result claim(TableContext ctx, String disciplineId) {
         Optional<TableType.Discipline> optional = ctx.discipline(disciplineId);
         if (optional.isEmpty()) {
-            return Result.fail("У этого стола нет дисциплины " + disciplineId + ".");
+            return Result.failKey("libresearch.reason.unknown_discipline", disciplineId);
         }
         TableType.Discipline discipline = optional.get();
 
@@ -263,13 +315,13 @@ public final class TheoryEngine {
         long granted = ctx.theory().reward(disciplineId);
         long points = KnowledgeMath.claimablePoints(granted, knowledge.centi(disciplineId));
         if (points <= 0) {
-            return Result.fail("Нечего забирать: нужно хотя бы 1 целое очко.");
+            return Result.failKey("libresearch.reason.nothing_to_claim");
         }
 
         long requested = points * Math.max(1, discipline.countPerPoint());
         int count = (int) Math.min(Integer.MAX_VALUE, requested);
         Item item = BuiltInRegistries.ITEM.get(discipline.payout());
-        String itemName = new ItemStack(item).getHoverName().getString();
+        Component itemName = new ItemStack(item).getHoverName();
         int maxStack = Math.max(1, new ItemStack(item).getMaxStackSize());
 
         int remaining = count;
@@ -287,21 +339,26 @@ public final class TheoryEngine {
         PlayerKnowledge.set(ctx.player(), knowledge.subtract(disciplineId, spent));
         ctx.theory().consumeReward(disciplineId, spent);
         ctx.markUpdated();
-        return Result.ok("Получено: " + count + " × " + itemName + " (списано " + points + " очк.).");
+        return Result.okKey("libresearch.msg.claimed", count, itemName, points);
     }
 
     public static Result claimAll(TableContext ctx) {
-        List<String> messages = new ArrayList<>();
+        var messages = Component.empty();
+        boolean any = false;
         for (String discipline : List.copyOf(ctx.theory().rewards().keySet())) {
             Result result = claim(ctx, discipline);
             if (result.ok()) {
-                messages.add(result.message().getString());
+                if (any) {
+                    messages.append(Component.literal(" "));
+                }
+                messages.append(result.message());
+                any = true;
             }
         }
-        if (messages.isEmpty()) {
-            return Result.fail("Нечего забирать: целых очков нет.");
+        if (!any) {
+            return Result.failKey("libresearch.msg.claim_none_points");
         }
-        return Result.ok(String.join(" ", messages));
+        return new Result(true, messages);
     }
 
     public static Result status(TableContext ctx) {
@@ -339,23 +396,23 @@ public final class TheoryEngine {
 
     public static Result debugSetProgress(TableContext ctx, String discipline, int percent) {
         if (!ctx.theory().isActive()) {
-            return Result.fail("Теория не идёт.");
+            return Result.failKey("libresearch.reason.theory_not_running");
         }
         if (!ctx.type().disciplineIds().contains(discipline)) {
-            return Result.fail("У стола нет дисциплины " + discipline + ".");
+            return Result.failKey("libresearch.reason.unknown_discipline", discipline);
         }
         ctx.theory().setProgress(discipline, percent);
         ctx.markUpdated();
-        return Result.ok(discipline + " → " + Math.max(0, percent) + "%.");
+        return Result.okKey("libresearch.msg.debug_progress", discipline, Math.max(0, percent));
     }
 
     public static Result debugSetInspiration(TableContext ctx, int value) {
         if (!ctx.theory().isActive()) {
-            return Result.fail("Теория не идёт.");
+            return Result.failKey("libresearch.reason.theory_not_running");
         }
         ctx.theory().setInspiration(value);
         ctx.markUpdated();
-        return Result.ok("Вдохновение → " + ctx.theory().inspiration() + ".");
+        return Result.okKey("libresearch.msg.debug_inspiration", ctx.theory().inspiration());
     }
 
     private static List<DrawnCard> drawHand(TableContext ctx, int size) {
@@ -475,13 +532,24 @@ public final class TheoryEngine {
         return 1;
     }
 
-    private static String describe(TableContext ctx, DrawnCard drawn) {
+    private static Component describe(TableContext ctx, DrawnCard drawn) {
         String name = Cards.INSTANCE.get(drawn.card())
                 .map(card -> card.display().isBlank() ? drawn.card().toString() : card.display())
                 .orElse(drawn.card().toString());
-        if (drawn.discipline() != null) {
-            name += " (" + drawn.discipline() + ")";
+        Component base = ContentText.display(name);
+        if (drawn.discipline() == null) {
+            return base;
         }
-        return name;
+        return Component.translatable("libresearch.msg.hand_card", base,
+                ContentText.display(drawn.discipline()));
+    }
+
+    /** Отображаемое имя дисциплины: {@code display} из типа стола либо её id. */
+    private static Component disciplineName(TableContext ctx, String disciplineId) {
+        return ctx.type().disciplines().stream()
+                .filter(discipline -> discipline.id().equals(disciplineId))
+                .map(discipline -> ContentText.display(discipline.display()))
+                .findFirst()
+                .orElse(ContentText.display(disciplineId));
     }
 }
