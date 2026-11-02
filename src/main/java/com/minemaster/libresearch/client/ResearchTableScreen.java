@@ -482,9 +482,8 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         Knowledge knowledge = knowledge();
         int row = 0;
         for (TableType.Discipline discipline : tableType().disciplines()) {
-            int percent = theory.progress(discipline.id());
-            long centi = knowledge.centi(discipline.id());
-            if (percent <= 0 && centi <= 0 && theory.reward(discipline.id()) <= 0) {
+            int percent = totalPercent(theory, knowledge, discipline.id());
+            if (percent <= 0 && theory.reward(discipline.id()) <= 0) {
                 continue;
             }
             if (row >= 6) {
@@ -509,19 +508,30 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
     }
 
     private List<Component> disciplineTooltip(TheoryState theory, TableType.Discipline discipline,
-                                              Knowledge knowledge, int percent) {
+                                              Knowledge knowledge, int totalPercent) {
+        long centi = knowledge.centi(discipline.id());
         List<Component> lines = new ArrayList<>();
         lines.add(ContentText.display(discipline.display()).copy().withStyle(ChatFormatting.BOLD));
-        lines.add(Component.translatable("libresearch.gui.discipline.progress", percent)
+        lines.add(Component.translatable("libresearch.gui.discipline.progress", theory.progress(discipline.id()))
                 .withStyle(ChatFormatting.GRAY));
-        lines.add(Component.translatable("libresearch.gui.discipline.total",
-                        knowledge.centi(discipline.id()) / KnowledgeMath.CENTI_PER_POINT)
+        lines.add(Component.translatable("libresearch.gui.discipline.stock", centi)
+                .withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("libresearch.gui.discipline.total", totalPercent, centi / KnowledgeMath.CENTI_PER_POINT)
                 .withStyle(ChatFormatting.GRAY));
         if (theory.isBlocked(discipline.id())) {
             lines.add(Component.translatable("libresearch.gui.discipline.blocked")
                     .withStyle(ChatFormatting.RED));
         }
         return lines;
+    }
+
+    /**
+     * Суммарный прогресс дисциплины в процентах: санти-очки, накопленные прошлыми
+     * теориями, плюс прогресс текущей. 1 санти-очко = 1%, поэтому складываются напрямую.
+     */
+    private int totalPercent(TheoryState theory, Knowledge knowledge, String disciplineId) {
+        long total = (long) theory.progress(disciplineId) + knowledge.centi(disciplineId);
+        return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, total));
     }
 
     /**
@@ -539,8 +549,8 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         Knowledge knowledge = knowledge();
         List<TableType.Discipline> visible = new ArrayList<>();
         for (TableType.Discipline discipline : tableType().disciplines()) {
-            int percent = theory.progress(discipline.id());
-            if (percent > 0 || knowledge.centi(discipline.id()) > 0 || theory.reward(discipline.id()) > 0) {
+            int percent = totalPercent(theory, knowledge, discipline.id());
+            if (percent > 0 || theory.reward(discipline.id()) > 0) {
                 visible.add(discipline);
             }
         }
@@ -557,7 +567,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                 break;
             }
             int y = STRIP_TOP + index * STRIP_STEP;
-            int percent = theory.progress(discipline.id());
+            int percent = totalPercent(theory, knowledge, discipline.id());
             boolean hovered = in(stripLeft, y, (stripX + STRIP_W) - stripLeft, STRIP_STEP - 2, mx, my);
             if (hovered) {
                 graphics.fill(stripX + 1, y, stripX + STRIP_W - 1, y + STRIP_STEP - 2, 0xFF4A3C33);
@@ -622,16 +632,20 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
             }
             Component rowLabel = claimable > 0
                     ? Component.translatable("libresearch.gui.rewards.row",
-                            ContentText.display(discipline.display()), claimable)
+                            ContentText.display(discipline.display()), claimable,
+                            claimable * Math.max(1, discipline.countPerPoint()))
                     : Component.translatable("libresearch.gui.rewards.row_partial",
                             ContentText.display(discipline.display()), reward);
-            graphics.drawString(font, rowLabel, rowX + 22, rowY + 6,
-                    claimable > 0 ? TEXT : DIM, false);
+            drawFitted(graphics, rowLabel, rowX + 22, rowY + 6, 182 - 24,
+                    claimable > 0 ? TEXT : DIM);
 
             if (in(rowX, rowY, 182, 20, mx, my)) {
                 List<Component> lines = new ArrayList<>();
                 lines.add(ContentText.display(discipline.display()).copy().withStyle(ChatFormatting.BOLD));
                 lines.add(Component.translatable("libresearch.gui.rewards.tip.granted", reward)
+                        .withStyle(ChatFormatting.GRAY));
+                lines.add(Component.translatable("libresearch.gui.rewards.tip.stock",
+                                knowledge.centi(discipline.id()))
                         .withStyle(ChatFormatting.GRAY));
                 lines.add(Component.translatable("libresearch.gui.rewards.tip.available", claimable,
                                 claimable * Math.max(1, discipline.countPerPoint()))
