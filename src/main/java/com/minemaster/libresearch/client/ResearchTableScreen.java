@@ -69,6 +69,8 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
     /** Полоса иконок дисциплин: слева от панели, вне зоны JEI. */
     private static final int STRIP_W = 20;
     private static final int STRIP_X = -26;
+    private static final int STRIP_PERCENT_W = 26;
+    private static final int STRIP_GAP = 4;
     private static final int STRIP_TOP = 46;
     private static final int STRIP_STEP = 22;
     private static final int STRIP_MAX = 9;
@@ -518,12 +520,14 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
     }
 
     /**
-     * Полоса иконок дисциплин слева от панели. Иконка берётся из {@code icon}
-     * дисциплины (id предмета), видимость — по правилу «нет очков → не показываем».
+     * Полоса иконок дисциплин слева от панели: иконка из {@code icon} дисциплины,
+     * слева от неё — процент текущей теории (может быть больше 100), под иконкой —
+     * полоска заполнения по этому проценту. Видимость — «нет очков → не показываем».
      */
     private void drawDisciplineStrip(GuiGraphics graphics, TheoryState theory, int mx, int my) {
-        int stripX = leftPos >= 34 ? STRIP_X : -STRIP_W - 4;
-        if (leftPos < 34) {
+        int stripX = STRIP_X;
+        int stripLeft = stripX - STRIP_PERCENT_W - STRIP_GAP;
+        if (leftPos + stripLeft < 0) {
             // Окно слишком узкое для полосы слева — не рисуем, чтобы не уехать за экран.
             return;
         }
@@ -539,8 +543,8 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
             return;
         }
         int height = Math.min(visible.size(), STRIP_MAX) * STRIP_STEP;
-        graphics.fill(stripX, STRIP_TOP - 2, stripX + STRIP_W, STRIP_TOP + height, PANEL);
-        graphics.renderOutline(stripX, STRIP_TOP - 2, STRIP_W, height + 2, BORDER);
+        graphics.fill(stripLeft, STRIP_TOP - 2, stripX + STRIP_W, STRIP_TOP + height, PANEL);
+        graphics.renderOutline(stripLeft, STRIP_TOP - 2, (stripX + STRIP_W) - stripLeft, height + 2, BORDER);
 
         int index = 0;
         for (TableType.Discipline discipline : visible) {
@@ -548,19 +552,36 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
                 break;
             }
             int y = STRIP_TOP + index * STRIP_STEP;
-            boolean hovered = in(stripX, y, STRIP_W, STRIP_STEP - 2, mx, my);
+            int percent = theory.progress(discipline.id());
+            boolean hovered = in(stripLeft, y, (stripX + STRIP_W) - stripLeft, STRIP_STEP - 2, mx, my);
             if (hovered) {
                 graphics.fill(stripX + 1, y, stripX + STRIP_W - 1, y + STRIP_STEP - 2, 0xFF4A3C33);
             }
+
+            // Процент — слева от иконки, вплотную к её колонке.
+            Component label = Component.literal(percent + "%");
+            int labelColor = percent > 100 ? GOLD : percent > 0 ? TEXT : DIM;
+            graphics.drawString(font, label, stripX - STRIP_GAP - font.width(label), y + 5,
+                    labelColor, false);
+
             ItemStack icon = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(discipline.icon()));
             if (!icon.isEmpty()) {
                 graphics.renderItem(icon, stripX + 2, y + 2);
             }
-            graphics.fill(stripX + 2, y + STRIP_STEP - 4, stripX + STRIP_W - 2, y + STRIP_STEP - 3,
-                    discipline.color() | 0xFF000000);
+
+            // Полоска заполнения: 100% — на всю ширину, больше — золотая (перелив).
+            int barX = stripX + 2;
+            int barW = STRIP_W - 4;
+            int barY = y + STRIP_STEP - 4;
+            graphics.fill(barX, barY, barX + barW, barY + 2, 0xFF2A211C);
+            int filled = Math.round(barW * Math.min(100, Math.max(0, percent)) / 100.0F);
+            if (filled > 0) {
+                graphics.fill(barX, barY, barX + filled, barY + 2,
+                        percent > 100 ? GOLD : discipline.color() | 0xFF000000);
+            }
 
             if (hovered) {
-                tooltip = disciplineTooltip(theory, discipline, knowledge, theory.progress(discipline.id()));
+                tooltip = disciplineTooltip(theory, discipline, knowledge, percent);
             }
             index++;
         }

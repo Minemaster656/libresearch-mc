@@ -36,12 +36,14 @@ JEI), убрать вкладку креатива и закрыть мелки�
 ### Иконки дисциплин
 `client/ResearchTableScreen.drawDisciplineStrip()`:
 - позиция `STRIP_X = −26`, шаг 22, максимум 9 иконок, ширина 20;
-- иконка — предмет из `TableType.Discipline.icon()` (16×16), под ней полоска цветом
-  дисциплины (`color | 0xFF000000`);
+- слева от иконки — **процент текущей теории** (`153%` и т.п., может быть больше 100),
+  справа от числа — иконка предмета из `TableType.Discipline.icon()`;
+- под иконкой — полоска заполнения по проценту: 100% заполняет всю ширину, больше 100%
+  рисуется золотой (перелив), текст процента тоже золотой;
 - видимость: `percent > 0 || centi > 0 || reward > 0` (правило «невидима, пока нет очков»);
 - наведение — подсветка + тултип с названием, процентами, санти-очками и наградой;
-- если окно слишком узкое (`leftPos < 34`), полоса не рисуется вовсе — чтобы не лезть
-  за край экрана (см. B14).
+- если окно слишком узкое (`leftPos + stripLeft < 0`), полоса не рисуется вовсе — чтобы
+  не лезть за край экрана (см. B14).
 
 Внутри панели в фазе игры остались текстовые строки дисциплин (`gui.discipline.line`), так
 что игрок видит и иконку, и проценты.
@@ -56,6 +58,27 @@ JEI), убрать вкладку креатива и закрыть мелки�
 - **B14:** длинные тексты в панелях теперь переносятся по словам (`drawWrapped`), полоса
   иконок прячется на узких окнах; сама панель по-прежнему фиксированных 340×270.
 
+### Бумага стала data-driven (просьба заказчика по ходу итерации)
+По аналогии с чернильницей добавлено определение бумаги:
+`data/<namespace>/libresearch/paper/<id>.json` → `{ "item": "minecraft:paper", "per_draw": 1 }`.
+
+- `item/PaperDefinition` + `item/Papers` (загрузчик, как `InkwellDefinitions`).
+- `TableType` получил поле `paper` (id определения, по умолчанию `libresearch:paper`).
+- `ResearchTableBlockEntity` пускает в слот бумаги предмет из определения стола.
+- `TableContext.paperPerDraw()` — движок берёт `per_draw` при старте и доборе
+  (розыгрыш карты бумагу не тратит, как и раньше; карта может потребовать доп. бумагу
+  эффектом `paper`).
+- GUI: иконка бумаги в требованиях карты, подсказка «бумага в инвентаре», кнопка добора.
+- `/libresearch prepare` кладёт в слот бумагу из определения.
+- `validate` проверяет: определение бумаги существует у типа стола, предмет известен,
+  `per_draw ≥ 1`.
+
+### Правки по скриншотам UiTest
+- Подпись «Бонусы: N (−N вдохн.)» больше не наезжает на правую колонку: переносится по
+  словам, кнопка «Начать теорию» сдвинута на y=146, подсказки — на y=168.
+- Длинные названия карт («Calibration») ужимаются по ширине (`drawFitted`), а не рвутся
+  посреди слова.
+
 ### Тест lang
 `src/test/java/com/minemaster/libresearch/LangKeysTest.java`:
 - собирает все строковые литералы вида `"libresearch.*"` из `src/main/java/**/*.java`
@@ -65,12 +88,17 @@ JEI), убрать вкладку креатива и закрыть мелки�
 `finished_entry`.
 
 ## Затронутые файлы
-- новый: `content/ContentText.java`, `src/test/java/.../LangKeysTest.java`,
-  `notes/iter/04-ui-lang.md`
+- новый: `content/ContentText.java`, `item/PaperDefinition.java`, `item/Papers.java`,
+  `src/test/java/.../LangKeysTest.java`,
+  `data/libresearch/libresearch/paper/paper.json`, `notes/iter/04-ui-lang.md`
 - переписаны: `client/ResearchTableScreen.java`, `client/CardText.java`,
   `theory/TheoryEngine.java`, `theory/EffectApplier.java`, `theory/RequirementChecker.java`,
   `assets/libresearch/lang/ru_ru.json`, `assets/libresearch/lang/en_us.json`
-- правки: `theory/TheoryCommand.java`, `LibResearch.java` (убран креатив-таб)
+- правки: `theory/TheoryCommand.java`, `theory/TableContext.java`,
+  `content/table/TableType.java`, `block/ResearchTableBlockEntity.java`,
+  `data/DataEvents.java`, `data/DataValidation.java`, `data/TableCommands.java`,
+  `data/libresearch/libresearch/table_type/{research,debug}.json`,
+  `LibResearch.java` (убран креатив-таб)
 - удалён: `registry/ModCreativeTabs.java`
 
 ## Как проверить
