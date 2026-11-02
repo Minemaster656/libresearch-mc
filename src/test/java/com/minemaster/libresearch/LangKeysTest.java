@@ -23,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * внешние зависимости тесту не нужны.</p>
  */
 class LangKeysTest {
-    private static final Pattern USED_KEY = Pattern.compile("\"(libresearch\\.[a-z0-9_.]+)\"");
-    private static final Pattern JSON_KEY = Pattern.compile("^\\s*\"(libresearch\\.[a-z0-9_.]+)\"\\s*:");
+    private static final Pattern USED_KEY = Pattern.compile("\"((?:attribute\\.)?libresearch\\.[a-z0-9_.]+)\"");
+    private static final Pattern JSON_KEY = Pattern.compile("^\\s*\"((?:attribute\\.)?libresearch\\.[a-z0-9_.]+)\"\\s*:");
 
     @Test
     void everyUsedKeyIsTranslated() throws IOException {

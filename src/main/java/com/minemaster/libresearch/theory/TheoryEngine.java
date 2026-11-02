@@ -82,7 +82,7 @@ public final class TheoryEngine {
             return Result.failKey("libresearch.reason.no_ink");
         }
 
-        int base = KnowledgeMath.startInspiration(0, 0);
+        int base = ctx.startInspiration();
         java.util.Set<ResourceLocation> detected = BonusScanner.scan(ctx.player().serverLevel(),
                 ctx.table().getBlockPos(), ctx.type());
 

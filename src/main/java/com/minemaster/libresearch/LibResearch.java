@@ -5,6 +5,7 @@ import com.minemaster.libresearch.data.LibCommands;
 import com.minemaster.libresearch.data.ModAttachments;
 import com.minemaster.libresearch.menu.ModMenus;
 import com.minemaster.libresearch.network.ModNetwork;
+import com.minemaster.libresearch.registry.ModAttributes;
 import com.minemaster.libresearch.registry.ModBlockEntities;
 import com.minemaster.libresearch.registry.ModBlocks;
 import com.minemaster.libresearch.registry.ModDataComponents;
@@ -38,8 +39,10 @@ public class LibResearch {
         ModItems.ITEMS.register(modBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modBus);
         ModMenus.MENUS.register(modBus);
+        ModAttributes.ATTRIBUTES.register(modBus);
 
         modBus.addListener(this::registerCapabilities);
+        modBus.addListener(ModAttributes::onEntityAttributeModification);
         modBus.addListener(ModNetwork::register);
         NeoForge.EVENT_BUS.addListener(DataEvents::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(LibCommands::register);

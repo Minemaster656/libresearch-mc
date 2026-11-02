@@ -91,18 +91,25 @@ class KnowledgeMathTest {
     }
 
     @Test
-    void inspirationGrowsWithResearchAndStopsAtCap() {
-        assertEquals(5, KnowledgeMath.startInspiration(0, 0));
-        assertEquals(10, KnowledgeMath.startInspiration(10, 0));
-        assertEquals(6, KnowledgeMath.startInspiration(0, 10));
-        assertEquals(15, KnowledgeMath.startInspiration(40, 40));
+    void inspirationGrowsWithResearchWithoutHardCap() {
+        assertEquals(5, KnowledgeMath.startInspiration(5.0, 0.0, 0.0));
+        assertEquals(10, KnowledgeMath.startInspiration(5.0, 10.0, 0.0));
+        assertEquals(6, KnowledgeMath.startInspiration(5.0, 0.0, 10.0));
+        assertEquals(13, KnowledgeMath.startInspiration(12.6, 0.0, 0.0));
+        assertEquals(100, KnowledgeMath.startInspiration(100.0, 0.0, 0.0));
+    }
+
+    @Test
+    void negativeOrZeroBaseStillAllowsOneInspiration() {
+        assertEquals(1, KnowledgeMath.startInspiration(0.0, 0.0, 0.0));
+        assertEquals(1, KnowledgeMath.startInspiration(-5.0, 0.0, 0.0));
     }
 
     @Test
     void chosenBonusesNeverConsumeTheLastInspiration() {
-        assertEquals(4, KnowledgeMath.startInspiration(0, 0, 1));
-        assertEquals(1, KnowledgeMath.startInspiration(0, 0, 4));
-        assertEquals(1, KnowledgeMath.startInspiration(0, 0, 10));
-        assertEquals(1, KnowledgeMath.startInspiration(10, 0, 20));
+        assertEquals(4, KnowledgeMath.startInspiration(5.0, 0.0, 0.0, 1));
+        assertEquals(1, KnowledgeMath.startInspiration(5.0, 0.0, 0.0, 4));
+        assertEquals(1, KnowledgeMath.startInspiration(5.0, 0.0, 0.0, 10));
+        assertEquals(1, KnowledgeMath.startInspiration(10.0, 0.0, 0.0, 20));
     }
 }

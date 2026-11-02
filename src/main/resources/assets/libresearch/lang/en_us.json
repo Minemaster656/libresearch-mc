@@ -4,6 +4,7 @@
   "item.libresearch.inkwell": "Inkwell",
   "tooltip.libresearch.inkwell_charges": "Ink: %s / %s",
   "container.libresearch.research_table": "Research Table",
+  "attribute.libresearch.starting_inspiration": "Starting Inspiration",
   "libresearch.table.empty": "Unknown table type",
   "libresearch.cmd.player_only": "This command works for players only.",
   "libresearch.cmd.look_at_table": "Look at a research table (up to 8 blocks).",

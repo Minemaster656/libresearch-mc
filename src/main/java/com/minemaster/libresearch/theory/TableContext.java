@@ -3,10 +3,12 @@ package com.minemaster.libresearch.theory;
 import com.minemaster.libresearch.block.ResearchTableBlockEntity;
 import com.minemaster.libresearch.content.table.TableType;
 import com.minemaster.libresearch.content.table.TableTypes;
+import com.minemaster.libresearch.core.KnowledgeMath;
 import com.minemaster.libresearch.item.InkwellData;
 import com.minemaster.libresearch.item.InkwellItem;
 import com.minemaster.libresearch.item.PaperDefinition;
 import com.minemaster.libresearch.item.Papers;
+import com.minemaster.libresearch.registry.ModAttributes;
 import com.minemaster.libresearch.registry.ModDataComponents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
@@ -73,6 +75,16 @@ public record TableContext(ServerPlayer player, ResearchTableBlockEntity table,
     /** Сколько бумаги уходит на один добор руки. */
     public int paperPerDraw() {
         return Math.max(1, paperDefinition().perDraw());
+    }
+
+    /** База стартового вдохновения из атрибута игрока (с модификаторами). */
+    public double baseInspiration() {
+        return ModAttributes.startingInspiration(player);
+    }
+
+    /** Стартовое вдохновение теории с учётом тегов исследований (пока не подключены). */
+    public int startInspiration() {
+        return KnowledgeMath.startInspiration(baseInspiration(), 0.0D, 0.0D);
     }
 
     public int paperCount() {

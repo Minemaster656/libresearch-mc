@@ -12,6 +12,7 @@ import com.minemaster.libresearch.core.KnowledgeMath;
 import com.minemaster.libresearch.item.Papers;
 import com.minemaster.libresearch.menu.ResearchTableMenu;
 import com.minemaster.libresearch.network.ModNetwork;
+import com.minemaster.libresearch.registry.ModAttributes;
 import com.minemaster.libresearch.theory.BonusScanner;
 import com.minemaster.libresearch.theory.DrawnCard;
 import com.minemaster.libresearch.theory.Knowledge;
@@ -136,7 +137,11 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
     }
 
     private int baseInspiration() {
-        return KnowledgeMath.startInspiration(0, 0);
+        if (minecraft == null || minecraft.player == null) {
+            return KnowledgeMath.startInspiration(KnowledgeMath.BASE_INSPIRATION, 0.0D, 0.0D);
+        }
+        return KnowledgeMath.startInspiration(
+                ModAttributes.startingInspiration(minecraft.player), 0.0D, 0.0D);
     }
 
     private int selectedCost() {

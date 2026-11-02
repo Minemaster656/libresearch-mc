@@ -1,12 +1,16 @@
 package com.minemaster.libresearch.theory;
 
+import com.minemaster.libresearch.LibResearch;
 import com.minemaster.libresearch.block.ResearchTableBlockEntity;
+import com.minemaster.libresearch.registry.ModAttributes;
 import com.minemaster.libresearch.registry.ModBlocks;
 import com.minemaster.libresearch.registry.ModItems;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -65,6 +69,20 @@ public final class SelfTest {
             check(passed, failures, "старт теории", TheoryEngine.start(ctx).ok());
             check(passed, failures, "повторный старт запрещён", !TheoryEngine.start(ctx).ok());
             check(passed, failures, "стартовое вдохновение 5", theory.inspiration() == 5);
+
+            AttributeInstance attribute = player.getAttribute(ModAttributes.STARTING_INSPIRATION);
+            check(passed, failures, "атрибут вдохновения есть у игрока (5)",
+                    attribute != null && attribute.getValue() == 5.0D);
+            if (attribute != null) {
+                AttributeModifier bonus = new AttributeModifier(
+                        LibResearch.id("selftest_inspiration"),
+                        5.0D, AttributeModifier.Operation.ADD_VALUE);
+                attribute.addTransientModifier(bonus);
+                check(passed, failures, "изменение атрибута не меняет текущую теорию",
+                        theory.startInspiration() == 5);
+                attribute.removeModifier(bonus.id());
+                check(passed, failures, "модификатор атрибута снят", attribute.getValue() == 5.0D);
+            }
 
             TheoryEngine.Result draw = TheoryEngine.draw(ctx);
             check(passed, failures, "добор руки", draw.ok() && !theory.hand().isEmpty());

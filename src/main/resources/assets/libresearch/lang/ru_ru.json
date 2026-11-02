@@ -4,6 +4,7 @@
   "item.libresearch.inkwell": "Чернильница",
   "tooltip.libresearch.inkwell_charges": "Чернила: %s / %s",
   "container.libresearch.research_table": "Стол исследований",
+  "attribute.libresearch.starting_inspiration": "Стартовое вдохновение",
   "libresearch.table.empty": "Неизвестный тип стола",
   "libresearch.cmd.player_only": "Команда работает только для игрока.",
   "libresearch.cmd.look_at_table": "Посмотрите на стол исследований (до 8 блоков).",

@@ -13,8 +13,10 @@ import java.util.List;
 public final class KnowledgeMath {
     public static final int CENTI_PER_POINT = 100;
 
-    public static final int BASE_INSPIRATION = 5;
-    public static final int MAX_INSPIRATION = 15;
+    /** Значение по умолчанию для атрибута {@code libresearch:starting_inspiration}. */
+    public static final double BASE_INSPIRATION = 5.0D;
+    /** Верхняя граница атрибута — она же «потолок» стартового вдохновения. */
+    public static final double MAX_INSPIRATION = 1024.0D;
     public static final double SPIKY_INSPIRATION = 0.5;
     public static final double HIDDEN_INSPIRATION = 0.1;
 
@@ -79,15 +81,21 @@ public final class KnowledgeMath {
         return Math.min(claimablePoints(grantedCenti), claimablePoints(stockCenti));
     }
 
-    /** Стартовое вдохновение до вычета бонусных блоков. */
-    public static int startInspiration(int spiky, int hidden) {
-        double raw = BASE_INSPIRATION + SPIKY_INSPIRATION * spiky + HIDDEN_INSPIRATION * hidden;
+    /**
+     * Стартовое вдохновение до вычета бонусных блоков.
+     *
+     * <p>{@code base} — значение атрибута {@code libresearch:starting_inspiration}
+     * (уже с модификаторами). Ядро остаётся чистым: {@code Player} сюда не передаётся.
+     * Жёсткого потолка 15 больше нет — верхнюю границу задаёт сам атрибут.</p>
+     */
+    public static int startInspiration(double base, double spiky, double hidden) {
+        double raw = base + SPIKY_INSPIRATION * spiky + HIDDEN_INSPIRATION * hidden;
         long rounded = Math.round(raw);
         return (int) Math.min(MAX_INSPIRATION, Math.max(1L, rounded));
     }
 
     /** Стартовое вдохновение после выбора бонусных блоков (минимум 1 остаётся). */
-    public static int startInspiration(int spiky, int hidden, int chosenBonuses) {
-        return Math.max(1, startInspiration(spiky, hidden) - Math.max(0, chosenBonuses));
+    public static int startInspiration(double base, double spiky, double hidden, int chosenBonuses) {
+        return Math.max(1, startInspiration(base, spiky, hidden) - Math.max(0, chosenBonuses));
     }
 }

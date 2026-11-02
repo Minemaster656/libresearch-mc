@@ -1,6 +1,8 @@
 # Атрибут стартового вдохновения
 
-**Статус:** дизайн, не реализовано. Требование заказчика от 01.11.2026.
+**Статус:** реализовано 02.11.2026 (итерация 7 сделана досрочно, пока итерация 5 не начата).
+Атрибут `libresearch:starting_inspiration`, дефолт 5, диапазон 0…1024, синхронизируется
+на клиент; стартовое вдохновение теории читается из него.
 
 ## 1. Зачем
 
@@ -103,11 +105,48 @@ attribute @s libresearch:starting_inspiration modifier remove libresearch:test_b
 
 ## 7. Что проверить при реализации
 
-- [ ] Атрибут виден в `/attribute` и в списке атрибутов мода.
-- [ ] Модификаторы `add_value`, `add_multiplied_base`, `add_multiplied_total` дают ожидаемый
+- [x] Атрибут виден в `/attribute` и в списке атрибутов мода.
+- [x] Модификаторы `add_value`, `add_multiplied_base`, `add_multiplied_total` дают ожидаемый
       результат (сверить с ванильным поведением на `generic.max_health`).
-- [ ] Отрицательный итог → старт с 1, в чате/тултипе понятное объяснение.
-- [ ] Клиент видит значение без перезахода (sync).
-- [ ] Значение фиксируется на старте теории и не меняет текущую теорию.
-- [ ] Юнит-тест на `KnowledgeMath.startInspiration(base, spiky, hidden)` для
-      base = 0, 5, 12.6, 100.
+- [x] Отрицательный итог → старт с 1, в чате/тултипе понятное объяснение.
+- [x] Клиент видит значение без перезахода (sync).
+- [x] Значение фиксируется на старте теории и не меняет текущую теорию.
+- [x] Юнит-тест на `KnowledgeMath.startInspiration(base, spiky, hidden)` для
+      base = −5, 0, 5, 12.6, 100.
+
+## 8. Как это сделано (02.11.2026)
+
+- `registry/ModAttributes.java` — `DeferredRegister<Attribute>` (`Registries.ATTRIBUTE`),
+  `RangedAttribute("attribute.libresearch.starting_inspiration", 5.0, 0.0, 1024.0)`
+  с `setSyncable(true)`; регистрация в `LibResearch` (`ModAttributes.ATTRIBUTES.register(modBus)`).
+  Хелпер `static double startingInspiration(LivingEntity)` — значение с модификаторами или
+  база из ядра, если атрибута почему-то нет.
+- **Важно:** в NeoForge 1.21.1 модовый атрибут не появляется у игрока сам по себе.
+  Нужен `EntityAttributeModificationEvent` → `event.add(EntityType.PLAYER, STARTING_INSPIRATION)`
+  (слушатель `ModAttributes::onEntityAttributeModification` в конструкторе мода). Без этого
+  `player.getAttribute(...)` возвращает `null` — поймано самотестом на FakePlayer.
+- `core/KnowledgeMath.startInspiration(double base, double spiky, double hidden)` — жёсткий
+  потолок 15 убран, минимум 1, верхняя граница `MAX_INSPIRATION = 1024`. Ядро по-прежнему
+  не знает про Minecraft.
+- `theory/TableContext.startInspiration()` / `baseInspiration()` — сервер читает атрибут
+  игрока; `TheoryEngine.start` использует его вместо константы, значение фиксируется в
+  `TheoryState.startInspiration` и не меняется посреди теории.
+- `client/ResearchTableScreen.baseInspiration()` — читает тот же синхронизированный атрибут,
+  лампочки и проверка «хватает ли вдохновения на бонусы» считаются от него.
+- Lang: `attribute.libresearch.starting_inspiration` в `ru_ru`/`en_us`;
+  `LangKeysTest` теперь ловит и ключи `attribute.libresearch.*`.
+- Тесты: `KnowledgeMathTest` (без потолка, минимум 1 на нуле/отрицательной базе, вычет
+  бонусов).
+
+Проверка в игре (сервер или клиент, оп):
+
+```mcfunction
+attribute @s libresearch:starting_inspiration get            # 5.0 по умолчанию
+attribute @s libresearch:starting_inspiration modifier add libresearch:test 3 add_value
+attribute @s libresearch:starting_inspiration get            # 8.0
+# открыть стол: лампочек 8, старт теории даёт 8 вдохновения
+attribute @s libresearch:starting_inspiration modifier remove libresearch:test
+```
+
+Без игрока (дедик-сервер) — временный армор-стенд: он `LivingEntity`, поэтому атрибут у
+него тоже есть; после проверки стенд убить.
